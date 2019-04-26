@@ -68,8 +68,9 @@ namespace Leo.Data
         public bool NoUpdate { get; set; }
 
 
-        private static Type columnAttributeType = typeof(ColumnAttribute);
-        private static Dictionary<Type, Dictionary<string, ColumnAttribute>> columnAttributesCaches = new Dictionary<Type, Dictionary<string, ColumnAttribute>>();
+        private static readonly Type columnAttributeType = typeof(ColumnAttribute);
+        private static Dictionary<Type, Dictionary<string, ColumnAttribute>> columnAttributesCaches 
+            = new Dictionary<Type, Dictionary<string, ColumnAttribute>>();
         public static bool TryGetColumnAttributes<T>(out Dictionary<string, ColumnAttribute> columnAttributes)
         {
             var type = typeof(T);
@@ -90,6 +91,32 @@ namespace Leo.Data
             }
             return columnAttributes.Any();
 
+        }
+
+        public static bool TryGetColumnAttribute(System.Reflection.PropertyInfo propertyInfo, out ColumnAttribute columnAttribute)
+        {
+           var atts= (ColumnAttribute[])propertyInfo.GetCustomAttributes(columnAttributeType, false);
+            columnAttribute = atts.FirstOrDefault();
+            return atts.Any();
+        }
+
+        public static bool TryGetKeyColumns<T>(out Dictionary<string, ColumnAttribute> keyColumns)
+        {
+            var type = typeof(T);
+            keyColumns = new Dictionary<string, ColumnAttribute>();
+            if (TryGetColumnAttributes<T>(out Dictionary<string, ColumnAttribute> columns))
+            {
+               var keys= columns.Where(key => key.Value.IsPrimaryKey);
+                if (keys.Any())
+                {
+                    foreach (var item in keys)
+                    {
+                        keyColumns.Add(item.Key, item.Value);
+                    }
+                    return true;
+                }
+            }
+            return false;
         }
 
     }

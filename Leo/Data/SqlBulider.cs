@@ -15,27 +15,28 @@ namespace Leo.Data
         public virtual string GetInsertSql<T>()
         {
             string sql = string.Empty;
-            string cacheKey = $"Insert|{typeof(T).Name}";
+            Type modelType = typeof(T);
+            string tableName = modelType.Name;
+            string cacheKey = $"Insert|{tableName}";
             if (!SqlCache.TryGetValue(cacheKey, out sql))
             {
-                if (ColumnAttribute.TryGetColumnAttributes<T>(out Dictionary<string, ColumnAttribute> columnatts)
-                && TableAttribute.TryGetTableAttribute<T>(out TableAttribute tableatt))
+                var infos = modelType.GetProperties();
+                if (TableAttribute.TryGetTableAttribute<T>(out TableAttribute tableatt)) tableName = tableatt.TableName;
+                string strFields = "";
+                string values = "";
+                foreach (var info in infos)
                 {
-                    var fields = columnatts.Where(att => !att.Value.IsIdentity);
-                    if (!fields.Any())
-                        throw new Exception($"实体{typeof(T).Name}没有可被匹配的字段，无法新增。");
-                    string strFields = "";
-                    string values = "";
-                    foreach (var field in fields)
+                    string fieldName = info.Name;
+                    if (ColumnAttribute.TryGetColumnAttribute(info, out ColumnAttribute columnAttribute))
                     {
-                        string attName = field.Value.ColumnName ?? field.Key;
-                        strFields += $"[{attName}],";
-                        values += $"@{attName},";
+                        if (columnAttribute.IsIdentity) continue;
+                        fieldName = columnAttribute.ColumnName;
                     }
-                    sql += $"Insert {tableatt.TableName ?? typeof(T).Name}";
-                    sql += $"({strFields.TrimEnd(',')}) Values({values.TrimEnd(',')})";
+                    strFields += $"[{fieldName}],";
+                    values += $"@{fieldName},";
                 }
-
+                sql += $"Insert into [{tableName}]";
+                sql += $"({strFields.TrimEnd(',')}) Values({values.TrimEnd(',')})";
                 SqlCache[cacheKey] = sql;
             }
             return sql;
@@ -44,16 +45,15 @@ namespace Leo.Data
         public virtual string GetDeleteSql<T>()
         {
             string sql = string.Empty;
-            string cacheKey = $"Delete|{typeof(T).Name}";
+            Type modelType = typeof(T);
+            string tableName = modelType.Name;
+            string cacheKey = $"Delete|{tableName}";
             if (!SqlCache.TryGetValue(cacheKey, out sql))
             {
-                if (ColumnAttribute.TryGetColumnAttributes<T>(out Dictionary<string, ColumnAttribute> columnatts)
-               && TableAttribute.TryGetTableAttribute<T>(out TableAttribute tableatt))
+                if (TableAttribute.TryGetTableAttribute<T>(out TableAttribute tableatt)) tableName = tableatt.TableName;
+                if (ColumnAttribute.TryGetKeyColumns<T>(out Dictionary<string, ColumnAttribute> keys))
                 {
-                    var keys = columnatts.Where(att => att.Value.IsPrimaryKey);
-                    if (!keys.Any())
-                        throw new Exception($"实体{typeof(T).Name}没有主键，无法被删除。");
-                    sql += $"Delete From {tableatt.TableName ?? typeof(T).Name} Where ";
+                    sql += $"Delete From {tableName} Where ";
                     foreach (var key in keys)
                     {
                         string keyName = key.Value.ColumnName ?? key.Key;
@@ -61,6 +61,11 @@ namespace Leo.Data
                     }
                     sql = sql.Remove(sql.LastIndexOf(" and"));
                 }
+                else
+                {
+                    throw new Exception($"实体{typeof(T).Name}没有主键，无法被删除。");
+                }
+
                 SqlCache[cacheKey] = sql;
             }
             return sql;
@@ -71,49 +76,53 @@ namespace Leo.Data
             if (conditions == null)
                 throw new NullReferenceException("条件不能为Null。");
             string sql = string.Empty;
+            Type modelType = typeof(T);
+            string tableName = modelType.Name;
+            if (TableAttribute.TryGetTableAttribute<T>(out TableAttribute tableAttribute)) tableName = tableAttribute.TableName;
             parameters = new Dictionary<string, object>();
-            if (TableAttribute.TryGetTableAttribute<T>(out TableAttribute tableAttribute))
-            {
-                sql = $"Delete from [{tableAttribute.TableName ?? typeof(T).Name}]";
-                string strWhere = GetWhere(conditions, out parameters);
-                if (!string.IsNullOrEmpty(strWhere))
-                    sql += $" Where {strWhere}";
-            }
+            sql = $"Delete from [{tableAttribute}]";
+            string strWhere = GetWhere(conditions, out parameters);
+            if (!string.IsNullOrEmpty(strWhere)) sql += $" Where {strWhere}";
             return sql;
         }
 
         public virtual string GetUpdateSql<T>()
         {
             string sql = string.Empty;
-            string cacheKey = $"Update|{typeof(T).Name}";
+            Type modelType = typeof(T);
+            string tableName = modelType.Name;
+            string cacheKey = $"Update|{tableName}";
             if (!SqlCache.TryGetValue(cacheKey, out sql))
             {
-                if (ColumnAttribute.TryGetColumnAttributes<T>(out Dictionary<string, ColumnAttribute> columnatts)
-               && TableAttribute.TryGetTableAttribute<T>(out TableAttribute tableatt))
+                var infos = modelType.GetProperties();
+                if (TableAttribute.TryGetTableAttribute<T>(out TableAttribute tableatt)) tableName = tableatt.TableName;
+                string strWhere = "";
+                if (ColumnAttribute.TryGetKeyColumns<T>(out Dictionary<string, ColumnAttribute> keys))
                 {
-                    var keys = columnatts.Where(att => att.Value.IsPrimaryKey);
-                    if (!keys.Any())
-                        throw new Exception($"实体{typeof(T).Name}没有可被匹配的主键，无法更新。");
-                    var fields = columnatts.Where(att => !att.Value.IsPrimaryKey && !att.Value.IsIdentity && !att.Value.NoUpdate);
-                    if (!fields.Any())
-                        throw new Exception($"实体{typeof(T).Name}没有可被匹配的字段，无法更新。");
-                    string strWhere = "";
                     foreach (var key in keys)
                     {
                         string attName = key.Value.ColumnName ?? key.Key;
                         strWhere += $" [{attName}]=@{attName} and";//条件
                     }
-                    string strFields = "";
-                    foreach (var field in fields)
-                    {
-                        string attName = field.Value.ColumnName ?? field.Key;
-
-                        strFields += $"[{attName}]=@{attName},";//声明参数
-                    }
-                    sql += $"Update {tableatt.TableName ?? typeof(T).Name} set ";
-                    sql += strFields.Trim(',');
-                    sql += " Where " + strWhere.Remove(strWhere.LastIndexOf(" and"));
                 }
+                else
+                {
+                    throw new Exception($"实体{modelType.Name}没有可被匹配的主键，无法更新。");
+                }
+                string strFields = "";
+                foreach (var info in infos)
+                {
+                    string fieldName = info.Name;
+                    if (ColumnAttribute.TryGetColumnAttribute(info, out ColumnAttribute columnAttribute))
+                    {
+                        if (columnAttribute.IsPrimaryKey || columnAttribute.IsIdentity || columnAttribute.NoUpdate) continue;
+                        fieldName = columnAttribute.ColumnName;
+                    }
+                    strFields += $"[{fieldName}]=@{fieldName},";//声明参数
+                }
+                sql += $"Update {tableName} set ";
+                sql += strFields.Trim(',');
+                sql += " Where " + strWhere.Remove(strWhere.LastIndexOf(" and"));
                 SqlCache[cacheKey] = sql;
             }
             return sql;
@@ -122,14 +131,14 @@ namespace Leo.Data
         public virtual string GetSelectSql<T>(IEnumerable<Condition> conditions, out Dictionary<string, object> parameters, int? top = null)
         {
             string sql = string.Empty;
+            Type modelType = typeof(T);
+            string tableName = modelType.Name;
+            if (TableAttribute.TryGetTableAttribute<T>(out TableAttribute tableAttribute)) tableName = tableAttribute.TableName;
             parameters = new Dictionary<string, object>();
-            if (TableAttribute.TryGetTableAttribute<T>(out TableAttribute tableAttribute))
-            {
-                sql = $"Select {(top.HasValue ? $"Top {top.Value}" : "")} * from [{tableAttribute.TableName ?? typeof(T).Name}]";
-                string strWhere = GetWhere(conditions, out parameters);
-                if (!string.IsNullOrEmpty(strWhere))
-                    sql += $" Where {strWhere}";
-            }
+            sql = $"Select {(top.HasValue ? $"Top {top.Value}" : "")} * from [{tableName}]";
+            string strWhere = GetWhere(conditions, out parameters);
+            if (!string.IsNullOrEmpty(strWhere))
+                sql += $" Where {strWhere}";
             return sql;
         }
 
@@ -142,8 +151,7 @@ namespace Leo.Data
         {
             string whereSql = string.Empty;
             parameters = new Dictionary<string, object>();
-            if (conditions == null)
-                return "";
+            if (conditions == null) return whereSql;
             foreach (var condition in conditions)
             {
                 whereSql += $"[{condition.Key}] ";

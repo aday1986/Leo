@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Linq;
 using System.Reflection;
@@ -71,8 +72,9 @@ namespace Leo.Data
 
     public class TestModel : IEntity
     {
+        [Key]
         [Column(IsPrimaryKey =true,DefaultValue ="9")]
-        public int ID { get; set; }
+        public int Id { get; set; }
         [Column()]
         public string Name { get; set; }
     }

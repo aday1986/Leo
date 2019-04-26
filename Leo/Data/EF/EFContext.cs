@@ -1,17 +1,27 @@
-﻿using JetBrains.Annotations;
-using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
+﻿using Microsoft.EntityFrameworkCore;
 using System.Text;
 
 namespace Leo.Data.EF
 {
-   public class EFContext:DbContext
+
+    public class EFContext : DbContext
     {
-        public EFContext(DbContextOptions options) : base(options)
+        private readonly IEntityTypeProvider modelProvider;
+
+        public EFContext(DbContextOptions options, IEntityTypeProvider modelProvider) : base(options)
         {
+            this.modelProvider = modelProvider;
         }
 
-        public DbSet<TestModel> testModels { get; set; }
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            var types = modelProvider.GetTypes();
+            foreach (var type in types)
+            {
+                modelBuilder.Model.AddEntityType(type);
+            }
+
+            base.OnModelCreating(modelBuilder);
+        }
     }
 }

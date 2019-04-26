@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Text;
 using Leo.ThirdParty.Dapper;
+using Microsoft.Extensions.Logging;
 
 namespace Leo.Data.Dapper
 {
@@ -21,7 +22,7 @@ namespace Leo.Data.Dapper
         {
             get
             {
-                if (currentTran == null)
+                if (currentTran == null|| currentTran.Connection==null)
                 {
                     var db = dbProvider.CreateConnection();
                     db.Open();
@@ -33,18 +34,12 @@ namespace Leo.Data.Dapper
         }
         public void Execute(DbTranAction dbTranAction)
         {
-            try
-            {
+
                 rowCount += dbTranAction.Invoke(CurrentTran);
-            }
-            catch (Exception)
-            {
-                rowCount = -1;
-                throw;
-            }
+
         }
 
-        public T Query<T>(DbQueryAction<T> dbQueryAction)
+        public IEnumerable<T> Query<T>(DbQueryAction<T> dbQueryAction)
         {
             try
             {
@@ -63,6 +58,8 @@ namespace Leo.Data.Dapper
         {
             try
             {
+                if (currentTran == null)
+                    return 0;
                 currentTran.Commit();
                 return rowCount;
             }
@@ -73,7 +70,8 @@ namespace Leo.Data.Dapper
             }
             finally
             {
-                currentTran.Dispose();
+                if (currentTran!=null) currentTran=null;
+               
                 rowCount = 0;
             }
         }
