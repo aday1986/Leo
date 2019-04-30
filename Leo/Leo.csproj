@@ -24,13 +24,11 @@
     <None Update="data.db">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Logging\log.db">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Caching\" />
+    <Folder Include="Data\AutoMapper\" />
   </ItemGroup>
 
 </Project>

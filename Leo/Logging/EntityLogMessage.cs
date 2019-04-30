@@ -1,7 +1,7 @@
 ﻿namespace Leo.Logging
 {
     /// <summary>
-    /// 实体模型的操作日志信息。
+    /// 用来记录实体模型的操作日志信息。
     /// </summary>
     public class EntityLogMessage
     {

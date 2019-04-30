@@ -4,6 +4,7 @@ namespace Leo.Data
 {
     public interface ISqlBulider
     {
+        string GetCreateSql<T>();
         string GetDeleteSql<T>();
         string GetDeleteSql<T>(IEnumerable<Condition> conditions, out Dictionary<string, object> parameters);
         string GetInsertSql<T>();

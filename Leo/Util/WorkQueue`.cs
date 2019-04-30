@@ -5,6 +5,7 @@ using System.Threading;
 
 namespace Leo.Util
 {
+    public delegate void UserWorkEventHandler<item>(object sender, EnqueueEventArgs<item> e);
     /// <summary>
     /// 工作队列
     /// </summary>
@@ -13,8 +14,6 @@ namespace Leo.Util
     {
         private bool isWorking; //表明处理线程是否正在工作
         private Queue<T> queue; //实际的队列
-
-        public delegate void UserWorkEventHandler<item>(object sender, WorkQueue<item>.EnqueueEventArgs e);
 
         /// <summary>
         /// 绑定用户需要对队列中的 <see cref="T"/> 对象施加的操作的事件
@@ -71,24 +70,24 @@ namespace Leo.Util
             {
                 if (queue.Count > 0)
                 {
-                    lock (this)
-                    {
+                    //lock (this)
+                    //{
                         if (queue.Count > 0)
                         {
                             item = queue.Dequeue();
                                 if (IsSingle)
                                 {
-                                    UserWork?.Invoke(this, new EnqueueEventArgs(item));
+                                    UserWork?.Invoke(this, new EnqueueEventArgs<T>(item));
                                 }
                                 else
                                 {
                                     ThreadPool.QueueUserWorkItem(obj =>
                                     {
-                                        UserWork?.Invoke(this, new EnqueueEventArgs(item));
+                                        UserWork?.Invoke(this, new EnqueueEventArgs<T>(item));
                                     });
                                 }      
                         }
-                    }
+                    //}
                 }
                 else
                 {
@@ -101,18 +100,20 @@ namespace Leo.Util
 
         }
 
-        /// <summary>
-        /// UserWork事件的参数，包含item对象
-        /// </summary>
-        public class EnqueueEventArgs : EventArgs
+ 
+    }
+
+    /// <summary>
+    /// UserWork事件的参数，包含item对象
+    /// </summary>
+    public class EnqueueEventArgs<T> : EventArgs
+    {
+        public T Item { get; private set; }
+        public EnqueueEventArgs(T item)
         {
-            public T Item { get; private set; }
-            public EnqueueEventArgs(T item)
-            {
 
-                Item = item;
+            Item = item;
 
-            }
         }
     }
 }

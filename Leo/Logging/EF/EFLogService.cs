@@ -12,7 +12,6 @@ namespace Leo.Logging.EF
 
         public EFLogService(LogContext db)
         {
-      
             this.db = db;
         }
 

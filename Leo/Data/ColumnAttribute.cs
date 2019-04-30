@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 
 namespace Leo.Data
@@ -67,56 +68,22 @@ namespace Leo.Data
         /// </summary>
         public bool NoUpdate { get; set; }
 
-
-        private static readonly Type columnAttributeType = typeof(ColumnAttribute);
-        private static Dictionary<Type, Dictionary<string, ColumnAttribute>> columnAttributesCaches 
-            = new Dictionary<Type, Dictionary<string, ColumnAttribute>>();
         public static bool TryGetColumnAttributes<T>(out Dictionary<string, ColumnAttribute> columnAttributes)
         {
             var type = typeof(T);
-            if (!columnAttributesCaches.TryGetValue(type, out columnAttributes))
-            {
-                var infos = type.GetProperties();
-                var dic = new Dictionary<string, ColumnAttribute>();
-                foreach (var info in infos)
-                {
-                    var atts = info.GetCustomAttributes(columnAttributeType, false);
-                    if (atts.Any())
-                    {
-                        dic.Add(info.Name, (ColumnAttribute)atts[0]);
-                    }
-                }
-                columnAttributes = dic;
-                columnAttributesCaches[type] = dic;
-            }
-            return columnAttributes.Any();
+            return type.TryGetColumnAttributes(out columnAttributes);
 
         }
 
-        public static bool TryGetColumnAttribute(System.Reflection.PropertyInfo propertyInfo, out ColumnAttribute columnAttribute)
+        public static bool TryGetColumnAttribute(PropertyInfo propertyInfo, out ColumnAttribute columnAttribute)
         {
-           var atts= (ColumnAttribute[])propertyInfo.GetCustomAttributes(columnAttributeType, false);
-            columnAttribute = atts.FirstOrDefault();
-            return atts.Any();
+            return propertyInfo.TryGetColumnAttribute(out columnAttribute);
         }
 
         public static bool TryGetKeyColumns<T>(out Dictionary<string, ColumnAttribute> keyColumns)
         {
             var type = typeof(T);
-            keyColumns = new Dictionary<string, ColumnAttribute>();
-            if (TryGetColumnAttributes<T>(out Dictionary<string, ColumnAttribute> columns))
-            {
-               var keys= columns.Where(key => key.Value.IsPrimaryKey);
-                if (keys.Any())
-                {
-                    foreach (var item in keys)
-                    {
-                        keyColumns.Add(item.Key, item.Value);
-                    }
-                    return true;
-                }
-            }
-            return false;
+            return type.TryGetKeyColumns(out keyColumns);
         }
 
     }

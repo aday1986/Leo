@@ -21,13 +21,13 @@ namespace Leo.Data
             if (!SqlCache.TryGetValue(cacheKey, out sql))
             {
                 var infos = modelType.GetProperties();
-                if (TableAttribute.TryGetTableAttribute<T>(out TableAttribute tableatt)) tableName = tableatt.TableName;
+                if (modelType.TryGetTableAttribute(out TableAttribute tableatt)) tableName = tableatt.TableName;
                 string strFields = "";
                 string values = "";
                 foreach (var info in infos)
                 {
                     string fieldName = info.Name;
-                    if (ColumnAttribute.TryGetColumnAttribute(info, out ColumnAttribute columnAttribute))
+                    if (info.TryGetColumnAttribute(out ColumnAttribute columnAttribute))
                     {
                         if (columnAttribute.IsIdentity) continue;
                         fieldName = columnAttribute.ColumnName;
@@ -50,8 +50,8 @@ namespace Leo.Data
             string cacheKey = $"Delete|{tableName}";
             if (!SqlCache.TryGetValue(cacheKey, out sql))
             {
-                if (TableAttribute.TryGetTableAttribute<T>(out TableAttribute tableatt)) tableName = tableatt.TableName;
-                if (ColumnAttribute.TryGetKeyColumns<T>(out Dictionary<string, ColumnAttribute> keys))
+                if (modelType.TryGetTableAttribute(out TableAttribute tableatt)) tableName = tableatt.TableName;
+                if (modelType.TryGetKeyColumns(out Dictionary<string, ColumnAttribute> keys))
                 {
                     sql += $"Delete From {tableName} Where ";
                     foreach (var key in keys)
@@ -78,7 +78,7 @@ namespace Leo.Data
             string sql = string.Empty;
             Type modelType = typeof(T);
             string tableName = modelType.Name;
-            if (TableAttribute.TryGetTableAttribute<T>(out TableAttribute tableAttribute)) tableName = tableAttribute.TableName;
+            if (modelType.TryGetTableAttribute(out TableAttribute tableAttribute)) tableName = tableAttribute.TableName;
             parameters = new Dictionary<string, object>();
             sql = $"Delete from [{tableAttribute}]";
             string strWhere = GetWhere(conditions, out parameters);
@@ -95,9 +95,9 @@ namespace Leo.Data
             if (!SqlCache.TryGetValue(cacheKey, out sql))
             {
                 var infos = modelType.GetProperties();
-                if (TableAttribute.TryGetTableAttribute<T>(out TableAttribute tableatt)) tableName = tableatt.TableName;
+                if (modelType.TryGetTableAttribute(out TableAttribute tableatt)) tableName = tableatt.TableName;
                 string strWhere = "";
-                if (ColumnAttribute.TryGetKeyColumns<T>(out Dictionary<string, ColumnAttribute> keys))
+                if (modelType.TryGetKeyColumns(out Dictionary<string, ColumnAttribute> keys))
                 {
                     foreach (var key in keys)
                     {
@@ -113,7 +113,7 @@ namespace Leo.Data
                 foreach (var info in infos)
                 {
                     string fieldName = info.Name;
-                    if (ColumnAttribute.TryGetColumnAttribute(info, out ColumnAttribute columnAttribute))
+                    if (info.TryGetColumnAttribute( out ColumnAttribute columnAttribute))
                     {
                         if (columnAttribute.IsPrimaryKey || columnAttribute.IsIdentity || columnAttribute.NoUpdate) continue;
                         fieldName = columnAttribute.ColumnName;
@@ -187,6 +187,11 @@ namespace Leo.Data
             if (whereSql.Length > 4)
                 whereSql = whereSql.Remove(whereSql.Length - 4);
             return whereSql;
+        }
+
+        public string GetCreateSql<T>()
+        {
+            throw new NotImplementedException();
         }
     }
 }

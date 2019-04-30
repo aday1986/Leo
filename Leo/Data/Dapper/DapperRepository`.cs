@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Leo.ThirdParty.Dapper;
+using Microsoft.Extensions.Logging;
 
 namespace Leo.Data.Dapper
 {
@@ -10,11 +11,13 @@ namespace Leo.Data.Dapper
     {
         private readonly IUnitOfWork unitOfWork;
         private readonly ISqlBulider sqlBulider;
+        private readonly ILogger logger;
 
-        public DapperRepository(IUnitOfWork unitOfWork, ISqlBulider sqlBulider)
+        public DapperRepository(IUnitOfWork unitOfWork, ISqlBulider sqlBulider,ILogger<DapperRepository<T>> logger=null)
         {
             this.unitOfWork = unitOfWork;
             this.sqlBulider = sqlBulider;
+            this.logger = logger;
         }
 
         public void Add(T entity)
@@ -24,6 +27,10 @@ namespace Leo.Data.Dapper
 
         public void AddRange(IEnumerable<T> entities)
         {
+            logger?.LogInformation($"{DateTime.Now.ToLongTimeString()}");
+            logger?.LogCritical($"Critical{DateTime.Now.ToLongTimeString()}");
+            logger?.LogWarning($"Warning{DateTime.Now.ToLongTimeString()}");
+            logger?.LogError($"Error{DateTime.Now.ToLongTimeString()}");
             unitOfWork.Execute(tran => tran.Connection.Execute(sqlBulider.GetInsertSql<T>(), entities, tran));
         }
 

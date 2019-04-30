@@ -11,13 +11,12 @@ namespace Leo.Logging.EF
     {
         public static IServiceCollection AddEFLogging(this IServiceCollection services, IConfiguration configuration = null)
         {
-          
             services.AddDbContext<LogContext>(options => options
                 .UseSqlite($"Filename={AppDomain.CurrentDomain.BaseDirectory}Logging/log.db")
                 .UseLoggerFactory(new LoggerFactory())
                 , ServiceLifetime.Singleton)
                 .AddSingleton<ILogService, EFLogService>();
-            return services.AddLogging(bulder =>
+            services.AddLogging(bulder =>
             {
                 LoggerFilterOptions filterOptions = null;
                 if (configuration != null)
@@ -25,11 +24,22 @@ namespace Leo.Logging.EF
                     filterOptions = GetLoggerFilterOptions(configuration.GetSection($"Logging:{EFLoggerProvider.ProviderName}"));
                     bulder.AddConfiguration(configuration.GetSection("Logging"));
                 }
-                bulder
-             .ClearProviders()
-              .AddProvider(new EFLoggerProvider(services.BuildServiceProvider().GetService<ILogService>(), filterOptions))
-             .AddConsole();
+                bulder.AddProvider(new EFLoggerProvider(services.BuildServiceProvider().GetService<ILogService>(), filterOptions));
             });
+
+            var db = services.BuildServiceProvider().GetService<LogContext>();
+            if (db.Database.EnsureCreated())//初始化数据库。
+            {
+                db.Database.ExecuteSqlCommand(new RawSqlString("DROP TABLE IF EXISTS main.LogInfo;" +
+                "CREATE TABLE LogInfo(" +
+                "Id  INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL," +
+                "CreateTime  TEXT NOT NULL,LogLevel  TEXT," +
+                "Message  TEXT," +
+                "EventId  INTEGER NOT NULL," +
+                "EventName  TEXT); "));
+            } 
+            services.BuildServiceProvider().GetService<LogContext>().Database.Migrate();
+            return services;
         }
 
 

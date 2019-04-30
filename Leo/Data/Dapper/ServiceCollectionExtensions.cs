@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Leo.Logging.EF;
 
 namespace Leo.Data.Dapper
 {
@@ -13,7 +14,6 @@ namespace Leo.Data.Dapper
             services.AddSingleton<ISqlBulider, SqlBulider>();
             services.AddSingleton<IDbProvider>(dbProvider);
             services.AddScoped(typeof(IRepository<>),typeof(DapperRepository<>));
-            services.AddSingleton<IRepositoryBuilder, DapperRepositoryBuilder>();
             return services;
         }
     }

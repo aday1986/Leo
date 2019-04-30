@@ -13,11 +13,15 @@ namespace Leo.Logging.EF
     {
         static LogContext()
         {
+            SQLitePCL.Batteries.Init();
 
         }
         public LogContext(DbContextOptions<LogContext> options) : base(options)
         {
+          
 
+            //this.Database.Migrate();
+           
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

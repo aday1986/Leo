@@ -8,6 +8,11 @@ namespace Leo.Data.EF
     {
         private readonly IEntityTypeProvider modelProvider;
 
+        static EFContext()
+        {
+            SQLitePCL.Batteries.Init();
+        }
+
         public EFContext(DbContextOptions options, IEntityTypeProvider modelProvider) : base(options)
         {
             this.modelProvider = modelProvider;

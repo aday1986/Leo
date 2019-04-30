@@ -16,13 +16,14 @@ namespace Leo.Logging.EF
             this.logService = logService;
             this.options = options;
         }
-        public Microsoft.Extensions.Logging.ILogger CreateLogger(string categoryName)
+        public ILogger CreateLogger(string categoryName)
         {
             return new EFLogger(categoryName, logService, options);
         }
 
         public void Dispose()
         {
+            this.Dispose();
             //throw new NotImplementedException();
         }
 

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 namespace Leo.Data
@@ -17,21 +16,9 @@ namespace Leo.Data
         /// </summary>
         public string Description { get; set; }
 
-        private static Type tableAttributeType = typeof(TableAttribute);
         public static bool TryGetTableAttribute<T>(out TableAttribute tableAttribute)
         {
-            var type = typeof(T);
-            var atts = type.GetCustomAttributes(tableAttributeType, false);
-            if (atts.Any())
-            {
-                tableAttribute = (TableAttribute)atts[0];
-                return true;
-            }
-            else
-            {
-                tableAttribute = null;
-                return false;
-            }
+            return typeof(T).TryGetTableAttribute(out tableAttribute);
         }
 
     }
