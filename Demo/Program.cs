@@ -30,8 +30,8 @@ namespace Demo
                     case "add":
                         Stopwatch stopwatch = new Stopwatch();
                         stopwatch.Start();
-                        double maxN = 100;
-                        double maxM = 1;
+                        double maxN = 10;
+                        double maxM = 1000;
                         for (int n = 1; n <= maxN; n++)
                         {
                             List<UserInfo> models = new List<UserInfo>();

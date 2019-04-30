@@ -9,6 +9,7 @@ namespace Leo.Data
     /// <summary>
     /// 字段特性
     /// </summary>
+    [AttributeUsage(AttributeTargets.Property)]
     public class ColumnAttribute : Attribute
     {
         /// <summary>

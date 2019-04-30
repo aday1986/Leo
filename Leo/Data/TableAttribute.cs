@@ -4,6 +4,7 @@ using System.Text;
 
 namespace Leo.Data
 {
+    [AttributeUsage( AttributeTargets.Class)]
     public class TableAttribute : Attribute
     {
         /// <summary>
