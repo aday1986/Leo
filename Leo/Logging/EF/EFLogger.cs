@@ -7,7 +7,7 @@ using System.Threading;
 
 namespace Leo.Logging.EF
 {
-    public class EFLogger : LoggerBase
+    public class EFLogger : BaseLogger
     {
         private readonly string categoryName;
         private readonly ILogService logService;

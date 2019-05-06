@@ -7,12 +7,12 @@ using Microsoft.Extensions.Configuration;
 
 namespace Leo.Logging
 {
-    public abstract class LoggerBase : ILogger
+    public abstract class BaseLogger : ILogger
     {
         private readonly string categoryName;
         private readonly LoggerFilterOptions options;
 
-        public LoggerBase(string categoryName,IConfiguration configuration=null)
+        public BaseLogger(string categoryName,IConfiguration configuration=null)
         {
             this.categoryName = categoryName;
             options = GetLoggerFilterOptions(configuration.GetSection($"Logging:{ProviderName}"));

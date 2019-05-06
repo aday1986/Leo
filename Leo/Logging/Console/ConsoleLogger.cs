@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Leo.Logging.Console
 {
-    public class ConsoleLogger : LoggerBase
+    public class ConsoleLogger : BaseLogger
     {
         private static Dictionary<LogLevel, ConsoleColor> colors = new Dictionary<LogLevel, ConsoleColor>();
 
@@ -14,7 +14,7 @@ namespace Leo.Logging.Console
 
         static ConsoleLogger()
         {
-            colors.Add(LogLevel.None, ConsoleColor.Blue);
+            colors.Add(LogLevel.None, ConsoleColor.White);
             colors.Add(LogLevel.Trace, ConsoleColor.Blue);
             colors.Add(LogLevel.Debug, ConsoleColor.Blue);
             colors.Add(LogLevel.Information, ConsoleColor.Blue);
