@@ -6,6 +6,7 @@ using Leo.Logging.EF;
 
 namespace Leo.Data.Dapper
 {
+   
    public static partial class ServiceCollectionExtensions
     {
         public static IServiceCollection AddDapperRepository(this IServiceCollection services,IDbProvider dbProvider)

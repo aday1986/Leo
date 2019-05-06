@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Leo.Fac;
 using Leo.ThirdParty.Dapper;
 using Microsoft.Extensions.Logging;
 
 namespace Leo.Data.Dapper
 {
+   [Service]
     public class DapperRepository<T> : IRepository<T> where T : class
     {
         private readonly IUnitOfWork unitOfWork;

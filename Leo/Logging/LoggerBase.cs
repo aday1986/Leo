@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Microsoft.Extensions.Configuration;
 
 namespace Leo.Logging
 {
@@ -11,10 +12,10 @@ namespace Leo.Logging
         private readonly string categoryName;
         private readonly LoggerFilterOptions options;
 
-        public LoggerBase(string categoryName,  LoggerFilterOptions options = null)
+        public LoggerBase(string categoryName,IConfiguration configuration=null)
         {
             this.categoryName = categoryName;
-            this.options = options;
+            options = GetLoggerFilterOptions(configuration.GetSection($"Logging:{ProviderName}"));
         }
 
         public IDisposable BeginScope<TState>(TState state)
@@ -63,6 +64,25 @@ namespace Leo.Logging
         }
 
         public abstract void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter);
-       
+
+        private static LoggerFilterOptions GetLoggerFilterOptions(IConfigurationSection configuration)
+        {
+            if (configuration == null)
+                return null;
+            LoggerFilterOptions options = new LoggerFilterOptions();
+            if (Enum.TryParse<LogLevel>(configuration.GetSection("MinLevel").Value, out LogLevel minLevel))
+            {
+                options.MinLevel = minLevel;
+            };
+            foreach (var item in configuration.GetSection("LogLevel").GetChildren())
+            {
+                if (Enum.TryParse(item.Value, out LogLevel logLevel))
+                {
+                    options.Rules.Add(
+                        new LoggerFilterRule(configuration.Key, item.Key, logLevel, null));
+                }
+            }
+            return options;
+        }
     }
 }

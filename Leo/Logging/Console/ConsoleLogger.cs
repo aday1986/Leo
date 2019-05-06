@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -23,8 +24,8 @@ namespace Leo.Logging.Console
             
         }
 
-        public ConsoleLogger(string categoryName, LoggerFilterOptions options = null)
-            :base(categoryName,options)
+        public ConsoleLogger(string categoryName, IConfiguration configuration = null)
+            :base(categoryName,configuration)
         {
             this.categoryName = categoryName;
         }

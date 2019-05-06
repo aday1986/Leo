@@ -1,10 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Leo.Fac;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
 namespace Leo.Data.EF
 {
+    [Service(ServiceType = typeof(IRepository<>))]
     public class EFRepository<T> : IRepository<T> where T : class
     {
         private readonly EFContext db;

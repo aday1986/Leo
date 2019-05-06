@@ -1,4 +1,5 @@
 ﻿using Leo.Util;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
@@ -10,17 +11,15 @@ namespace Leo.Logging.EF
     {
         private readonly string categoryName;
         private readonly ILogService logService;
-        private readonly LoggerFilterOptions options;
         private WorkQueue<LogInfo> workQueue = new WorkQueue<LogInfo>();
 
         protected override string ProviderName => EFLoggerProvider.ProviderName;
 
-        public EFLogger(string categoryName, ILogService logService, LoggerFilterOptions options=null) 
-            :base(categoryName,options)
+        public EFLogger(string categoryName, ILogService logService, IConfiguration configuration = null) 
+            :base(categoryName,configuration)
         {
             this.categoryName = categoryName;
             this.logService = logService;
-            this.options = options;
             workQueue.UserWork += WorkQueue_UserWork;
         }
 

@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Leo.Fac;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,6 +7,7 @@ using System.Text;
 
 namespace Leo.Logging.EF
 {
+    [Service(ServiceType = typeof(ILogService))]
    public class EFLogService: ILogService
     {
         private readonly LogContext db;
