@@ -13,14 +13,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="readme.html" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="readme.html" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Autofac" Version="4.9.2" />
     <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="4.4.0" />
     <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />

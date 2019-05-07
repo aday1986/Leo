@@ -5,7 +5,7 @@
         <p4>DI依赖注入</p4>
         <ul>
             <li>Microsoft.Extensions.DependencyInjection</li>
-            <li><a>https://github.com/autofac/Autofac</a>Autofac</li>
+            <li><a href="https://github.com/autofac/Autofac">Autofac</a></li>
         </ul>
     </li>
     <li>
