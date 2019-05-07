@@ -22,9 +22,10 @@ namespace Demo
     {
         static void Main(string[] args)
         {
-            IServiceCollection services = new ServiceCollection();
-            ConfigureServices(services);
-            var repository = services.BuildServiceProvider().GetService<IRepository<UserInfo>>();
+            IServiceProvider provider = ConfigureServices();
+         
+          ;
+            var repository = provider.GetService<IRepository<UserInfo>>();
             while (true)
             {
                 Console.WriteLine("1.add;2.query");
@@ -59,10 +60,10 @@ namespace Demo
             }
         }
 
-        public static void ConfigureServices(IServiceCollection services)
+        public static IServiceProvider ConfigureServices()
         {
-
-            services.AddAssembly(Assembly.GetEntryAssembly());
+            IServiceCollection services = new ServiceCollection();
+           services.AddAssembly(Assembly.GetEntryAssembly());
             //services.AddEFRepository(new EntityTypeProvider(new[] { typeof(UserInfo) }) , option => option.UseSqlite("Filename=data.db"));
             //services.AddEFRepository(new EntityTypeProvider(new[] { typeof(UserInfo) }), option => option.UseInMemoryDatabase("data"));
             services.AddDapperRepository(new SqliteDbProvider($"Data Source={AppDomain.CurrentDomain.BaseDirectory}data.db"));
@@ -71,10 +72,11 @@ namespace Demo
             services.AddConsole();
             var r = Assembly.GetEntryAssembly().GetAllAssemblies();
             var types = Assembly.GetEntryAssembly().GetAllDefinedTypes();
-
+            IServiceProvider provider = AutofacContainer.Build(services);
 #if DEBUG
             //services.AddLogging(builder => builder.AddDebug());
 #endif
+            return provider;
         }
     }
 
