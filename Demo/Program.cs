@@ -5,6 +5,7 @@ using Leo.Data.Dapper;
 using Leo.Data.EF;
 using Leo.Fac;
 using Leo.Logging.Console;
+using Leo.Logging.EF;
 using Leo.ThirdParty.AutoMapper;
 using Leo.Util;
 using Microsoft.EntityFrameworkCore;
@@ -65,10 +66,8 @@ namespace Demo
             //services.AddEFRepository(new EntityTypeProvider(new[] { typeof(UserInfo) }) , option => option.UseSqlite("Filename=data.db"));
             //services.AddEFRepository(new EntityTypeProvider(new[] { typeof(UserInfo) }), option => option.UseInMemoryDatabase("data"));
             services.AddDapperRepository(new SqliteDbProvider($"Data Source={AppDomain.CurrentDomain.BaseDirectory}data.db"));
-
-        
             services.AddConfiguration();
-            //services.AddEFLogging();
+            services.AddEFLogging();
             services.AddConsole();
             var r = Assembly.GetEntryAssembly().GetAllAssemblies();
             var types = Assembly.GetEntryAssembly().GetAllDefinedTypes();

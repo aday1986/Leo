@@ -1,11 +1,4 @@
-﻿using Leo.Logging;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Design;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Microsoft.EntityFrameworkCore;
 
 namespace Leo.Logging.EF
 {
@@ -18,18 +11,10 @@ namespace Leo.Logging.EF
         }
         public LogContext(DbContextOptions<LogContext> options) : base(options)
         {
-          
 
-            //this.Database.Migrate();
-           
         }
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-           // modelBuilder.Model.AddEntityType(typeof(LogInfo));
-            base.OnModelCreating(modelBuilder);
-        }
-
+       
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             base.OnConfiguring(optionsBuilder);

@@ -54,7 +54,6 @@
 
   <ItemGroup>
     <Folder Include="Caching\" />
-    <Folder Include="lib\" />
   </ItemGroup>
 
 </Project>

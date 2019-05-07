@@ -8,6 +8,11 @@ namespace Leo.Config
 {
     public static partial class ServiceCollectionExtensions
     {
+        /// <summary>
+        /// 注入appsettings.json到<see cref="IConfiguration"/>。
+        /// </summary>
+        /// <param name="services"></param>
+        /// <returns></returns>
         public static IServiceCollection AddConfiguration(this IServiceCollection services)
         {
             var builder = new ConfigurationBuilder()
