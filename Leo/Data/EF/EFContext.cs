@@ -10,12 +10,13 @@ namespace Leo.Data.EF
 
         static EFContext()
         {
-            SQLitePCL.Batteries.Init();
+            SQLitePCL.Batteries.Init();//初始化sqlite
         }
 
         public EFContext(DbContextOptions options, IEntityTypeProvider modelProvider) : base(options)
         {
             this.modelProvider = modelProvider;
+            
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

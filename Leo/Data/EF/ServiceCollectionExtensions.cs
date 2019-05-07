@@ -16,8 +16,5 @@ namespace Leo.Data.EF
             services.AddScoped(typeof(IRepository<>), typeof(EFRepository<>));
             return services;
         }
-
-       
-
     }
 }
