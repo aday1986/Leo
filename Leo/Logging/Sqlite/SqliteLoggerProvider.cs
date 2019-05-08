@@ -4,28 +4,27 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Leo.Logging.EF
+namespace Leo.Logging.Sqlite
 {
-    public class EFLoggerProvider : ILoggerProvider
+    public class SqliteLoggerProvider : ILoggerProvider
     {
-        private readonly ILogService logService;
+        private readonly Data.IRepository<LogInfo> repository;
         private readonly IConfiguration configuration;
-        public const string ProviderName = "EF";
+        public const string ProviderName = "Sqlite";
 
-        public EFLoggerProvider(ILogService logService,IConfiguration configuration=null)
+        public SqliteLoggerProvider(Leo.Data.IRepository<LogInfo>  repository,IConfiguration configuration=null)
         {
-            this.logService = logService;
+            this.repository = repository;
             this.configuration = configuration;
         }
         public ILogger CreateLogger(string categoryName)
         {
-            return new EFLogger(categoryName, logService, configuration);
+            return new SqliteLogger(categoryName, repository, configuration);
         }
 
         public void Dispose()
         {
             this.Dispose();
-            //throw new NotImplementedException();
         }
 
        

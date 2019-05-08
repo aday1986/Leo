@@ -34,7 +34,7 @@ namespace Leo.Logging
         {
             if (options == null)
                 return true;
-            if (logLevel <= options.MinLevel)
+            if (logLevel < options.MinLevel)
                 return false;
             var rule = options.Rules
                 .Where(r => r.ProviderName == ProviderName && categoryName.StartsWith(r.CategoryName))

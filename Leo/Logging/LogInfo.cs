@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Leo.Data;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
@@ -8,6 +9,7 @@ namespace Leo.Logging
     public class LogInfo
     {
         [Key]
+        [Column(IsIdentity =true)]
         public int Id { get; set; }
         public DateTime CreateTime { get; set; }
         public string LogLevel { get; set; }

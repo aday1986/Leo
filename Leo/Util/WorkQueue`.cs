@@ -5,24 +5,41 @@ using System.Threading;
 
 namespace Leo.Util
 {
-    public delegate void UserWorkEventHandler<item>(object sender, EnqueueEventArgs<item> e);
     /// <summary>
-    /// 工作队列
+    /// <see cref="T"/>出列委托。
     /// </summary>
     /// <typeparam name="T"></typeparam>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
+    public delegate void ItemDequeueEventHandler<T>(object sender, QueueEventArgs<T> e);
+    /// <summary>
+    /// 工作队列。
+    /// </summary>
+    /// <typeparam name="T">要进行处理的对象。</typeparam>
     public class WorkQueue<T>
     {
         private bool isWorking; //表明处理线程是否正在工作
         private Queue<T> queue; //实际的队列
 
         /// <summary>
-        /// 绑定用户需要对队列中的 <see cref="T"/> 对象施加的操作的事件
+        /// 当<see cref="T"/>出列时发生。
         /// </summary>
-        public event UserWorkEventHandler<T> UserWork;
+        public event ItemDequeueEventHandler<T> AfterItemDequeue;
 
-        public WorkQueue(int n)
+        /// <summary>
+        /// 当<see cref="IEnumerable{T}"/>出列时发生，需配置<see cref="EachQueue"/>值大于1才会触发。
+        /// </summary>
+        public event ItemDequeueEventHandler<IEnumerable<T>> AfterItemsDequeue;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="eachQueue">每个队列操作处理的对象个数。</param>
+        /// <param name="action"></param>
+        public WorkQueue(int eachQueue, ItemDequeueEventHandler<IEnumerable<T>> action) : this()
         {
-            queue = new Queue<T>(n);
+            EachQueue = eachQueue;
+            AfterItemsDequeue += action;
         }
 
         public WorkQueue()
@@ -30,11 +47,15 @@ namespace Leo.Util
             queue = new Queue<T>();
         }
 
+        /// <summary>
+        /// <see cref="T"/>剩余未处理的数量。
+        /// </summary>
+        public int ItemCount { get { return queue.Count; } }
 
         /// <summary>
-        /// 队列未处理数量
+        /// 每次队列处理<see cref="T"/>数量。
         /// </summary>
-        public int QueueCount { get { return queue.Count; } }
+        public int EachQueue { get; } = 1;
 
         /// <summary>
         /// 队列处理是否单线程顺序执行,默认为True单线程.
@@ -42,7 +63,7 @@ namespace Leo.Util
         public bool IsSingle { get; set; } = true;
 
         /// <summary>
-        /// 向工作队列添加对象,对象添加以后，如果已经绑定工作的事件,会触发事件处理程序,对item对象进行处理
+        /// 向工作队列添加<see cref="T"/>。
         /// </summary>
         /// <param name="item">添加到队列的对象</param>
         public void EnqueueItem(T item)
@@ -53,14 +74,24 @@ namespace Leo.Util
                 if (!isWorking)
                 {
                     isWorking = true;
-                    ThreadPool.QueueUserWorkItem(DoUserWork);
+                    if (EachQueue > 1 && AfterItemsDequeue != null)
+                    {
+                        ThreadPool.QueueUserWorkItem(DoUserWorks);
+                    }
+                    else if (AfterItemDequeue != null)
+                    {
+                        ThreadPool.QueueUserWorkItem(DoUserWork);
+                    }
+                    else
+                    {
+                        throw new ArgumentNullException("未注册队列处理事件。");
+                    }
                 }
             }
-
         }
 
         /// <summary>
-        /// 处理队列中对象的函数
+        /// 处理队列中对象。
         /// </summary>
         /// <param name="o"></param>
         private void DoUserWork(object o)
@@ -68,52 +99,82 @@ namespace Leo.Util
             T item;
             while (isWorking)
             {
-                if (queue.Count > 0)
-                {
-                    //lock (this)
-                    //{
-                        if (queue.Count > 0)
-                        {
-                            item = queue.Dequeue();
-                                if (IsSingle)
-                                {
-                                    UserWork?.Invoke(this, new EnqueueEventArgs<T>(item));
-                                }
-                                else
-                                {
-                                    ThreadPool.QueueUserWorkItem(obj =>
-                                    {
-                                        UserWork?.Invoke(this, new EnqueueEventArgs<T>(item));
-                                    });
-                                }      
-                        }
-                    //}
-                }
-                else
+                if (queue.Count > 0)//双锁
                 {
                     lock (this)
                     {
-                        isWorking = false;
+                        if (queue.Count > 0)
+                        {
+                            item = queue.Dequeue();
+                            if (IsSingle)
+                            {
+                                AfterItemDequeue?.Invoke(this, new QueueEventArgs<T>(item));
+                            }
+                            else
+                            {
+                                ThreadPool.QueueUserWorkItem(obj =>
+                                {
+                                    AfterItemDequeue?.Invoke(this, new QueueEventArgs<T>(item));
+                                });
+                            }
+                        }
+                        else isWorking = false;
                     }
                 }
             }
-
         }
 
- 
+        /// <summary>
+        /// 处理队列中多个对象。
+        /// </summary>
+        /// <param name="o"></param>
+        private void DoUserWorks(object o)
+        {
+            List<T> items;
+            while (isWorking)
+            {
+                if (queue.Count > 0)//双锁
+                {
+                    lock (this)
+                    {
+                        if (queue.Count > 0)
+                        {
+                            int count = (queue.Count >= EachQueue ? EachQueue : queue.Count);
+                            items = new List<T>();
+                            for (int i = 0; i < count; i++)
+                            {
+                                items.Add(queue.Dequeue());
+                            }
+
+                            if (IsSingle)
+                            {
+                                AfterItemsDequeue?.Invoke(this, new QueueEventArgs<IEnumerable<T>>(items));
+                            }
+                            else
+                            {
+                                ThreadPool.QueueUserWorkItem(obj =>
+                                {
+                                    AfterItemsDequeue?.Invoke(this, new QueueEventArgs<IEnumerable<T>>(items));
+                                });
+                            }
+                        }
+                        else
+                            isWorking = false;
+                    }
+                }
+            }
+        }
     }
 
     /// <summary>
     /// UserWork事件的参数，包含item对象
     /// </summary>
-    public class EnqueueEventArgs<T> : EventArgs
+    public class QueueEventArgs<T> : EventArgs
     {
-        public T Item { get; private set; }
-        public EnqueueEventArgs(T item)
+        public T Item { get; }
+        public QueueEventArgs(T item)
         {
-
             Item = item;
-
         }
     }
 }

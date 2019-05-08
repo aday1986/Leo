@@ -37,10 +37,13 @@ namespace Leo.Logging.Console
             if (!IsEnabled(logLevel))
                 return;
             var message = GetMessage(logLevel, eventId, state, exception, formatter);
-            System.Console.ForegroundColor = colors[logLevel];
-            System.Console.Write($"{DateTime.Now.ToString("yy-MM-dd HH:mm:ss")} " );
-            System.Console.ForegroundColor = ConsoleColor.White;
-            System.Console.WriteLine(message);
+            lock (this)
+            {
+                System.Console.ForegroundColor = colors[logLevel];
+                System.Console.Write($"{DateTime.Now.ToString("yy-MM-dd HH:mm:ss")} ");
+                System.Console.ForegroundColor = ConsoleColor.White;
+                System.Console.WriteLine(message);
+            } 
         }
 
         

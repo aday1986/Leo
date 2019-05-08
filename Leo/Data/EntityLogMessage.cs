@@ -1,4 +1,4 @@
-﻿namespace Leo.Logging
+﻿namespace Leo.Data
 {
     /// <summary>
     /// 用来记录实体模型的操作日志信息。

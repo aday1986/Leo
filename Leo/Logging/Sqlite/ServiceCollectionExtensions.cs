@@ -4,15 +4,17 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
+using Leo.Data.Dapper;
+using Leo.Data;
 
-namespace Leo.Logging.EF
+namespace Leo.Logging.Sqlite
 {
     public static partial class ServiceCollectionExtensions
     {
-        public static IServiceCollection AddEFLogging(this IServiceCollection services)
+        public static IServiceCollection AddSqliteLogging(this IServiceCollection services)
         {
             string dir = $"{AppDomain.CurrentDomain.BaseDirectory }Logging";
-            string path = $"Filename={dir}/log.db";
+            string path = $"DataSource={dir}/log.db";
             if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
             return services.AddEFLogging(path);
         }
@@ -21,15 +23,12 @@ namespace Leo.Logging.EF
         {
             var configuration = services.BuildServiceProvider().GetService<IConfiguration>();
 
-            services.AddDbContext<LogContext>(options => options
-                .UseSqlite(path)
-                .UseLoggerFactory(new LoggerFactory())
-                , ServiceLifetime.Singleton)
-                .AddSingleton<ILogService, EFLogService>();
-            services.AddLogging(bulder => bulder.AddProvider(
-                new EFLoggerProvider(services.BuildServiceProvider().GetService<ILogService>(), configuration))
-);
-            var db = services.BuildServiceProvider().GetService<LogContext>();
+            //单独注入一个仓储
+            SQLitePCL.Batteries.Init();
+            IServiceCollection logservices = new ServiceCollection();
+            logservices.AddDapperRepository(new Data.SqliteDbProvider(path))
+                .AddDbContext<DbContext>(options => options.UseSqlite(path), ServiceLifetime.Singleton);
+            var db = logservices.BuildServiceProvider().GetService<DbContext>();
             if (db.Database.EnsureCreated())//初始化数据库。
             {
                 db.Database.ExecuteSqlCommand(new RawSqlString("DROP TABLE IF EXISTS main.LogInfo;" +
@@ -40,6 +39,11 @@ namespace Leo.Logging.EF
                 "EventId  INTEGER NOT NULL," +
                 "EventName  TEXT); "));
             }
+
+            services.AddLogging(bulder => bulder.AddProvider(
+                new SqliteLoggerProvider(logservices.BuildServiceProvider().GetService<IRepository<LogInfo>>(), configuration))
+);
+           
             return services;
         }
 

@@ -1,36 +1,36 @@
-﻿using Leo.Util;
+﻿using Leo.Data;
+using Leo.Util;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
-namespace Leo.Logging.EF
+namespace Leo.Logging.Sqlite
 {
-    public class EFLogger : BaseLogger
+    public class SqliteLogger : BaseLogger
     {
         private readonly string categoryName;
-        private readonly ILogService logService;
-        private WorkQueue<LogInfo> workQueue = new WorkQueue<LogInfo>();
+        private readonly IRepository<LogInfo> repository;
+        private WorkQueue<LogInfo> workQueue;
 
-        protected override string ProviderName => EFLoggerProvider.ProviderName;
+        protected override string ProviderName => SqliteLoggerProvider.ProviderName;
 
-        public EFLogger(string categoryName, ILogService logService, IConfiguration configuration = null) 
-            :base(categoryName,configuration)
+        public SqliteLogger(string categoryName, Leo.Data.IRepository<LogInfo> repository, IConfiguration configuration = null)
+            : base(categoryName, configuration)
         {
             this.categoryName = categoryName;
-            this.logService = logService;
-            workQueue.UserWork += WorkQueue_UserWork;
-        }
-
-        private void WorkQueue_UserWork(object sender, EnqueueEventArgs<LogInfo> e)
-        {
-                lock (logService)//这里要锁实际调用的logService。
+            this.repository = repository;
+            workQueue = new WorkQueue<LogInfo>(1000, (s, e) =>
+            {
+                lock (repository)//这里要锁实际调用的logService。
                 {
-                    logService.AddAsync(e.Item);
+                    repository.AddRange(e.Item);
+                    repository.SaveChanges();
                 }
+            });
         }
-
 
         public override void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {
@@ -40,7 +40,7 @@ namespace Leo.Logging.EF
             var message = GetMessage(logLevel, eventId, state, exception, formatter);
 
             LogInfo log = new LogInfo()
-            { 
+            {
                 CreateTime = DateTime.Now,
                 LogLevel = logLevel.ToString(),
                 Message = message,

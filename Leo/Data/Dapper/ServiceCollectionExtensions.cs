@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Leo.Logging.EF;
+using Leo.Logging.Sqlite;
 
 namespace Leo.Data.Dapper
 {
