@@ -92,11 +92,11 @@ namespace Demo
         public static IServiceProvider ConfigureServices()
         {
             IServiceCollection services = new ServiceCollection();
-            services.AddAssembly(Assembly.GetEntryAssembly());
-            //services.AddEFRepository(new EntityTypeProvider(new[] { typeof(UserInfo) }) , option => option.UseSqlite("Filename=data.db"));
-            //services.AddEFRepository(new EntityTypeProvider(new[] { typeof(UserInfo) }), option => option.UseInMemoryDatabase("data"));
-            services.AddDapperRepository(new SqliteDbProvider($"Data Source={AppDomain.CurrentDomain.BaseDirectory}data.db"));
             services.AddConfiguration();
+            services.AddEFRepository(new EntityTypeProvider(new[] { typeof(UserInfo) }) , option => option.UseSqlite("Filename=data.db"));
+            //services.AddEFRepository(new EntityTypeProvider(new[] { typeof(UserInfo) }), option => option.UseInMemoryDatabase("data"));
+            //services.AddDapperRepository(new SqliteDbProvider($"Data Source={AppDomain.CurrentDomain.BaseDirectory}data.db"));
+          
             services.AddSqliteLogging();
             services.AddFileLogging();
             services.AddConsole();
