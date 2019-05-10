@@ -30,7 +30,7 @@ namespace Leo.Data
                     if (info.TryGetColumnAttribute(out ColumnAttribute columnAttribute))
                     {
                         if (columnAttribute.IsIdentity) continue;
-                        fieldName = columnAttribute.ColumnName;
+                        fieldName = columnAttribute.ColumnName??info.Name;
                     }
                     strFields += $"[{fieldName}],";
                     values += $"@{fieldName},";
