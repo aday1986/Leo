@@ -15,11 +15,15 @@ namespace Leo.Config
         /// <returns></returns>
         public static IServiceCollection AddConfiguration(this IServiceCollection services)
         {
-            var builder = new ConfigurationBuilder()
-                 .SetBasePath(AppDomain.CurrentDomain.BaseDirectory) // <== compile failing here
-                 .AddJsonFile("appsettings.json");
-            var config = builder.Build();
-            services.AddSingleton<IConfiguration>(config);
+            if (System.IO.File.Exists($"{AppDomain.CurrentDomain.BaseDirectory}appsettings.json"))
+            {
+                var builder = new ConfigurationBuilder()
+               .SetBasePath(AppDomain.CurrentDomain.BaseDirectory) // <== compile failing here
+               .AddJsonFile("appsettings.json");
+                var config = builder.Build();
+                services.AddSingleton<IConfiguration>(config);
+            }
+          
             return services;
         }
     }

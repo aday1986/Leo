@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Leo.Data;
 
-namespace Native.Csharp.App.Model
+namespace Leo.Native.Message
 {
     public class GroupMessage
     {

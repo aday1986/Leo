@@ -55,14 +55,8 @@ namespace Native.Csharp.App.Event
 			// 在此写上需要注册的回调类型, 以 <接口, 实现类> 的方式进行注册
 			// 下列代码演示的是如何将 IEvent_UserExpand 的实现类 Event_UserExpand 类注入到容器中
 			container.RegisterType<IEvent_UserExpand, Event_UserExpand> ();
-
-            IServiceCollection services = new ServiceCollection();
-            string dir = $"{AppDomain.CurrentDomain.BaseDirectory }Data";
-            string path = $"DataSource={dir}/msg.db";
-            services.AddDapperRepository(new SqliteDbProvider(path));
-            services.AddFileLogging();
-            ServiceProviderFactory factory = new ServiceProviderFactory(container);
-            ServiceProvider = factory.CreateServiceProvider(services);
+          
+            container = Leo.Native.Startup.ConfigServices(container);
         }
 
         public static IServiceProvider ServiceProvider { get; set; }
@@ -78,7 +72,7 @@ namespace Native.Csharp.App.Event
                 // 当已经注入了新的回调类型时
                 // 在此分发已经注册的回调类型, 解析完毕后分发到导出的事件进行注册
                 // 下列代码演示如何将 IEvent_UserExpand 接口实例化并拿到对应的实例
-                IEvent_UserExpand userExpand = ServiceProvider.GetService<IEvent_UserExpand>();
+                IEvent_UserExpand userExpand = container.Resolve<IEvent_UserExpand>();
                 UserExport.UserOpenConsole += userExpand.OpenConsoleWindow;
           
           

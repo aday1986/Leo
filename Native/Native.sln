@@ -13,6 +13,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsFormsApp1", "Windows
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Leo", "..\Leo\Leo.csproj", "{4681ECA9-4155-4C25-A2BA-81D395FA26BC}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Leo.Native", "Leo.Native\Leo.Native.csproj", "{5EB8B3E4-F90D-4ECC-B1B2-285DD1C85412}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp1", "ConsoleApp1\ConsoleApp1.csproj", "{A62160F0-C663-4D91-809A-2EA6F95C1177}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +59,22 @@ Global
 		{4681ECA9-4155-4C25-A2BA-81D395FA26BC}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4681ECA9-4155-4C25-A2BA-81D395FA26BC}.Release|x86.ActiveCfg = Release|Any CPU
 		{4681ECA9-4155-4C25-A2BA-81D395FA26BC}.Release|x86.Build.0 = Release|Any CPU
+		{5EB8B3E4-F90D-4ECC-B1B2-285DD1C85412}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5EB8B3E4-F90D-4ECC-B1B2-285DD1C85412}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5EB8B3E4-F90D-4ECC-B1B2-285DD1C85412}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5EB8B3E4-F90D-4ECC-B1B2-285DD1C85412}.Debug|x86.Build.0 = Debug|Any CPU
+		{5EB8B3E4-F90D-4ECC-B1B2-285DD1C85412}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5EB8B3E4-F90D-4ECC-B1B2-285DD1C85412}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5EB8B3E4-F90D-4ECC-B1B2-285DD1C85412}.Release|x86.ActiveCfg = Release|Any CPU
+		{5EB8B3E4-F90D-4ECC-B1B2-285DD1C85412}.Release|x86.Build.0 = Release|Any CPU
+		{A62160F0-C663-4D91-809A-2EA6F95C1177}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A62160F0-C663-4D91-809A-2EA6F95C1177}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A62160F0-C663-4D91-809A-2EA6F95C1177}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A62160F0-C663-4D91-809A-2EA6F95C1177}.Debug|x86.Build.0 = Debug|Any CPU
+		{A62160F0-C663-4D91-809A-2EA6F95C1177}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A62160F0-C663-4D91-809A-2EA6F95C1177}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A62160F0-C663-4D91-809A-2EA6F95C1177}.Release|x86.ActiveCfg = Release|Any CPU
+		{A62160F0-C663-4D91-809A-2EA6F95C1177}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -168,16 +168,18 @@
     <None Include="app.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="Data\msg.db" />
     <None Include="FodyWeavers.xml" />
-    <None Include="Data\msg.db">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Leo\Leo.csproj">
       <Project>{4681eca9-4155-4c25-a2ba-81d395fa26bc}</Project>
       <Name>Leo</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Leo.Native\Leo.Native.csproj">
+      <Project>{5eb8b3e4-f90d-4ecc-b1b2-285dd1c85412}</Project>
+      <Name>Leo.Native</Name>
     </ProjectReference>
     <ProjectReference Include="..\Native.Csharp.Sdk\Native.Csharp.Sdk.csproj">
       <Project>{797eaebc-4d5b-4eef-87f4-a508fda2cb6a}</Project>
