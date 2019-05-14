@@ -6,22 +6,23 @@ namespace Leo.Data.EF
 
     public class EFContext : DbContext
     {
-        private readonly IEntityTypeProvider modelProvider;
+        private readonly IEntityTypeCollection types;
 
         static EFContext()
         {
             SQLitePCL.Batteries.Init();//初始化sqlite
         }
 
-        public EFContext(DbContextOptions options, IEntityTypeProvider modelProvider) : base(options)
+        public EFContext(DbContextOptions options, IEntityTypeCollection types) : base(options)
         {
-            this.modelProvider = modelProvider;
-            
+            this.types = types;
+
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            var types = modelProvider.GetTypes();
+            //动态加载实体模型。
+
             foreach (var type in types)
             {
                 modelBuilder.Model.AddEntityType(type);

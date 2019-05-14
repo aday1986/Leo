@@ -19,6 +19,7 @@ bld/
 [Bb]in/
 [Oo]bj/
 [Ll]og/
+Native.Csharp.Frame/
 
 # Visual Studio 2015 cache/options directory
 .vs/

@@ -10,7 +10,9 @@ namespace Leo.Data
     public interface IUnitOfWork
     {
         void Execute(DbTranAction dbTranAction);
+
        IEnumerable<T> Query<T>(DbQueryAction<T> dbQueryAction);
+
         int SaveChanges();
     }
 

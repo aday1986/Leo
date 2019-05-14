@@ -27,12 +27,10 @@ namespace Leo.Data.Dapper
             unitOfWork.Execute(tran => tran.Connection.Execute(sqlBulider.GetInsertSql<T>(), entity, tran));
         }
 
+       
+
         public void AddRange(IEnumerable<T> entities)
         {
-            logger?.LogInformation($"{DateTime.Now.ToLongTimeString()}");
-            logger?.LogCritical($"Critical{DateTime.Now.ToLongTimeString()}");
-            logger?.LogWarning($"Warning{DateTime.Now.ToLongTimeString()}");
-            logger?.LogError($"Error{DateTime.Now.ToLongTimeString()}");
             unitOfWork.Execute(tran => tran.Connection.Execute(sqlBulider.GetInsertSql<T>(), entities, tran));
         }
 

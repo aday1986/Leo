@@ -11,17 +11,10 @@ namespace Leo.Logging.File
 {
     public class FileLogger : BaseLogger
     {
-        private static readonly string path;
         private readonly string categoryName;
         private readonly WorkQueue<string> workQueue;
-
-        static FileLogger()
-        {
-            path = $"{ AppDomain.CurrentDomain.BaseDirectory}\\Logging";
-            if (!Directory.Exists(path)) Directory.CreateDirectory(path);
-        }
-
-        public FileLogger(string categoryName, IConfiguration configuration = null)
+    
+        public FileLogger(string dir, string categoryName, IConfiguration configuration = null)
             : base(categoryName, configuration)
         {
             this.categoryName = categoryName;
@@ -29,7 +22,7 @@ namespace Leo.Logging.File
             {
                 string message = string.Empty;
                 message = string.Join(System.Environment.NewLine, e.Item);
-                string fileFullName = Path.Combine(path, $"{DateTime.Now.ToString("yyyyMMdd")}.log");
+                string fileFullName = Path.Combine(dir, $"{DateTime.Now.ToString("yyyyMMdd")}.log");
                 using (FileStream output = new FileStream(fileFullName, FileMode.Append, FileAccess.Write, FileShare.Write))
                 {
                     using (StreamWriter writer = new StreamWriter(output, Encoding.Unicode))

@@ -9,9 +9,9 @@ namespace Leo.Data.EF
 {
    public static partial class ServiceCollectionExtensions
     {
-        public static IServiceCollection AddEFRepository(this IServiceCollection services,IEntityTypeProvider entityTypeProvider, Action<DbContextOptionsBuilder> optionsAction = null)
+        public static IServiceCollection AddEFRepository(this IServiceCollection services,IEntityTypeCollection entityTypeProvider, Action<DbContextOptionsBuilder> optionsAction = null)
         {
-            services.AddSingleton<IEntityTypeProvider>(entityTypeProvider);
+            services.AddSingleton<IEntityTypeCollection>(entityTypeProvider);
             services.AddDbContext<EFContext>(optionsAction, ServiceLifetime.Scoped);
             services.AddScoped(typeof(IRepository<>), typeof(EFRepository<>));
             return services;

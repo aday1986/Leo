@@ -93,7 +93,7 @@ namespace Demo
         {
             IServiceCollection services = new ServiceCollection();
             services.AddConfiguration();
-            services.AddEFRepository(new EntityTypeProvider(new[] { typeof(UserInfo) }) , option => option.UseSqlite("Filename=data.db"));
+            services.AddEFRepository(new EntityTypeCollection(new[] { typeof(UserInfo) }) , option => option.UseSqlite("Filename=data.db"));
             //services.AddEFRepository(new EntityTypeProvider(new[] { typeof(UserInfo) }), option => option.UseInMemoryDatabase("data"));
             //services.AddDapperRepository(new SqliteDbProvider($"Data Source={AppDomain.CurrentDomain.BaseDirectory}data.db"));
           

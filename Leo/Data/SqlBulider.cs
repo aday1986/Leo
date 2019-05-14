@@ -17,13 +17,13 @@ namespace Leo.Data
             string sql = string.Empty;
             Type modelType = typeof(T);
             string tableName = modelType.Name;
-            string cacheKey = $"Insert|{tableName}";
+            string cacheKey = $"INSERT|{tableName}";
             if (!SqlCache.TryGetValue(cacheKey, out sql))
             {
                 var infos = modelType.GetProperties();
-                if (modelType.TryGetTableAttribute(out TableAttribute tableatt)) tableName = tableatt.TableName;
-                string strFields = "";
-                string values = "";
+                if (modelType.TryGetTableAttribute(out TableAttribute tableatt)) tableName = tableatt.TableName ?? modelType.Name;
+                string strFields = string.Empty;
+                string values = string.Empty;
                 foreach (var info in infos)
                 {
                     string fieldName = info.Name;
@@ -35,8 +35,8 @@ namespace Leo.Data
                     strFields += $"[{fieldName}],";
                     values += $"@{fieldName},";
                 }
-                sql += $"Insert into [{tableName}]";
-                sql += $"({strFields.TrimEnd(',')}) Values({values.TrimEnd(',')})";
+                sql += $"INSERT INTO [{tableName}]";
+                sql += $"({strFields.TrimEnd(',')}) VALUES({values.TrimEnd(',')})";
                 SqlCache[cacheKey] = sql;
             }
             return sql;
@@ -47,19 +47,19 @@ namespace Leo.Data
             string sql = string.Empty;
             Type modelType = typeof(T);
             string tableName = modelType.Name;
-            string cacheKey = $"Delete|{tableName}";
+            string cacheKey = $"DELETE|{tableName}";
             if (!SqlCache.TryGetValue(cacheKey, out sql))
             {
-                if (modelType.TryGetTableAttribute(out TableAttribute tableatt)) tableName = tableatt.TableName;
+                if (modelType.TryGetTableAttribute(out TableAttribute tableatt)) tableName = tableatt.TableName ?? modelType.Name;
                 if (modelType.TryGetKeyColumns(out Dictionary<string, ColumnAttribute> keys))
                 {
-                    sql += $"Delete From {tableName} Where ";
+                    sql += $"DELETE FROM {tableName} WHERE ";
                     foreach (var key in keys)
                     {
                         string keyName = key.Value.ColumnName ?? key.Key;
-                        sql += $"[{keyName}]=@{keyName} and";
+                        sql += $"[{keyName}]=@{keyName} AND";
                     }
-                    sql = sql.Remove(sql.LastIndexOf(" and"));
+                    sql = sql.Remove(sql.LastIndexOf(" AND"));
                 }
                 else
                 {
@@ -78,11 +78,11 @@ namespace Leo.Data
             string sql = string.Empty;
             Type modelType = typeof(T);
             string tableName = modelType.Name;
-            if (modelType.TryGetTableAttribute(out TableAttribute tableAttribute)) tableName = tableAttribute.TableName;
+            if (modelType.TryGetTableAttribute(out TableAttribute tableAttribute)) tableName = tableAttribute.TableName??modelType.Name;
             parameters = new Dictionary<string, object>();
-            sql = $"Delete from [{tableAttribute}]";
+            sql = $"DELETE FROM [{tableName}]";
             string strWhere = GetWhere(conditions, out parameters);
-            if (!string.IsNullOrEmpty(strWhere)) sql += $" Where {strWhere}";
+            if (!string.IsNullOrEmpty(strWhere)) sql += $" WHERE {strWhere}";
             return sql;
         }
 
@@ -91,18 +91,18 @@ namespace Leo.Data
             string sql = string.Empty;
             Type modelType = typeof(T);
             string tableName = modelType.Name;
-            string cacheKey = $"Update|{tableName}";
+            string cacheKey = $"UPDATE|{tableName}";
             if (!SqlCache.TryGetValue(cacheKey, out sql))
             {
                 var infos = modelType.GetProperties();
-                if (modelType.TryGetTableAttribute(out TableAttribute tableatt)) tableName = tableatt.TableName;
-                string strWhere = "";
+                if (modelType.TryGetTableAttribute(out TableAttribute tableatt)) tableName = tableatt.TableName??modelType.Name;
+                string strWhere = string.Empty;
                 if (modelType.TryGetKeyColumns(out Dictionary<string, ColumnAttribute> keys))
                 {
                     foreach (var key in keys)
                     {
                         string attName = key.Value.ColumnName ?? key.Key;
-                        strWhere += $" [{attName}]=@{attName} and";//条件
+                        strWhere += $" [{attName}]=@{attName} AND";//条件
                     }
                 }
                 else
@@ -116,13 +116,13 @@ namespace Leo.Data
                     if (info.TryGetColumnAttribute( out ColumnAttribute columnAttribute))
                     {
                         if (columnAttribute.IsPrimaryKey || columnAttribute.IsIdentity || columnAttribute.NoUpdate) continue;
-                        fieldName = columnAttribute.ColumnName;
+                        fieldName = columnAttribute.ColumnName??info.Name;
                     }
                     strFields += $"[{fieldName}]=@{fieldName},";//声明参数
                 }
-                sql += $"Update {tableName} set ";
+                sql += $"UPDATE {tableName} SET ";
                 sql += strFields.Trim(',');
-                sql += " Where " + strWhere.Remove(strWhere.LastIndexOf(" and"));
+                sql += " WHERE " + strWhere.Remove(strWhere.LastIndexOf(" AND"));
                 SqlCache[cacheKey] = sql;
             }
             return sql;
@@ -133,12 +133,12 @@ namespace Leo.Data
             string sql = string.Empty;
             Type modelType = typeof(T);
             string tableName = modelType.Name;
-            if (TableAttribute.TryGetTableAttribute<T>(out TableAttribute tableAttribute)) tableName = tableAttribute.TableName;
+            if (TableAttribute.TryGetTableAttribute<T>(out TableAttribute tableAttribute)) tableName = tableAttribute.TableName??modelType.Name;
             parameters = new Dictionary<string, object>();
-            sql = $"Select {(top.HasValue ? $"Top {top.Value}" : "")} * from [{tableName}]";
+            sql = $"SELECT {(top.HasValue ? $"TOP {top.Value}" : "")} * FROM [{tableName}]";
             string strWhere = GetWhere(conditions, out parameters);
             if (!string.IsNullOrEmpty(strWhere))
-                sql += $" Where {strWhere}";
+                sql += $" WHERE {strWhere}";
             return sql;
         }
 
@@ -182,7 +182,7 @@ namespace Leo.Data
                 string parmKey = $"@parm{parameters.Count}";
                 whereSql += " " + parmKey;
                 parameters.Add(parmKey, condition.Value);
-                whereSql += " And ";
+                whereSql += " AND ";
             }
             if (whereSql.Length > 4)
                 whereSql = whereSql.Remove(whereSql.Length - 4);

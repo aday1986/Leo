@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Text;
-using Leo.ThirdParty.Dapper;
-using Microsoft.Extensions.Logging;
 
 namespace Leo.Data.Dapper
 {
@@ -34,9 +31,7 @@ namespace Leo.Data.Dapper
         }
         public void Execute(DbTranAction dbTranAction)
         {
-
                 rowCount += dbTranAction.Invoke(CurrentTran);
-
         }
 
         public IEnumerable<T> Query<T>(DbQueryAction<T> dbQueryAction)
@@ -71,7 +66,6 @@ namespace Leo.Data.Dapper
             finally
             {
                 if (currentTran!=null) currentTran=null;
-               
                 rowCount = 0;
             }
         }
