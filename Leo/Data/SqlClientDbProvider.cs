@@ -11,28 +11,28 @@ namespace Leo.Data
     {
         private readonly string connectionString;
 
-        public SqlClientDbProvider(string connectionString)
+        public  SqlClientDbProvider(string connectionString)
         {
             this.connectionString = connectionString;
         }
 
-        public IDbDataAdapter CreateAdapter()
+        public override IDbDataAdapter CreateAdapter()
         {
             return new SqlDataAdapter();
         }
 
-        public IDbCommand CreateCommand()
+        public override IDbCommand CreateCommand()
         {
             return new SqlCommand();
         }
 
-        public IDbConnection CreateConnection()
+        public override IDbConnection CreateConnection()
         {
             return new SqlConnection(connectionString);
 
         }
 
-        public IDbDataParameter CreateDataParameter(string key, object value)
+        public override IDbDataParameter CreateDataParameter(string key, object value)
         {
            return new SqlParameter(key,value);
         }

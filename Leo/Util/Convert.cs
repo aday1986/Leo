@@ -23,7 +23,6 @@ namespace Leo.Util
                     result = parameters[1];
                 return success;
             }
-
             try
             {
                 result = System.Convert.ChangeType(obj, type);

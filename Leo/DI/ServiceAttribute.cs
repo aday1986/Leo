@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Leo.Fac
+namespace Leo.DI
 {
 
     [AttributeUsage(AttributeTargets.Class)]

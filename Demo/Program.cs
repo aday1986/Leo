@@ -3,13 +3,11 @@ using Leo.Config;
 using Leo.Data;
 using Leo.Data.Dapper;
 using Leo.Data.EF;
-using Leo.Fac;
 using Leo.Logging.Console;
 using Leo.Logging.Sqlite;
 using Leo.ThirdParty.AutoMapper;
 using Leo.Util;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -18,6 +16,8 @@ using System.Reflection;
 using Leo.Logging.File;
 using Microsoft.Extensions.Logging;
 using System.Threading;
+using Leo.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Demo
 {
@@ -26,7 +26,7 @@ namespace Demo
         static void Main(string[] args)
         {
             IServiceProvider provider = ConfigureServices();
-            var repository = provider.GetService<IRepository<UserInfo>>();
+            var repository = provider.GetService<IRepository<LogInfo>>();
             while (true)
             {
                 Stopwatch stopwatch = new Stopwatch();
@@ -66,10 +66,10 @@ namespace Demo
                         double maxM = 10;
                         for (int n = 1; n <= maxN; n++)
                         {
-                            List<UserInfo> models = new List<UserInfo>();
+                            List<LogInfo> models = new List<LogInfo>();
                             for (int m = 1; m <= maxM; m++)
                             {
-                                models.Add(new UserInfo() { Guid = Guid.NewGuid().ToString(), UserName = Guid.NewGuid().ToString() });
+                                models.Add(new LogInfo() { CreateTime = DateTime.Now, Message = $"数据插入测试{n}-{m}" });
                             }
                             repository.AddRange(models);
                             repository.SaveChanges();
@@ -78,7 +78,7 @@ namespace Demo
 
                         break;
                     case "query":
-                        var r = repository.Query(new[] { new Condition() { ConditionType = ConditionEnum.NotEqual, Key = "Guid", Value = string.Empty } });
+                        var r = repository.Query(new[] { new Condition() { ConditionType = ConditionEnum.NotEqual, Key = "Id", Value = 0 } });
                         Console.WriteLine(r.Count());
                         break;
                     default:
@@ -93,16 +93,14 @@ namespace Demo
         {
             IServiceCollection services = new ServiceCollection();
             services.AddConfiguration();
-            services.AddEFRepository(new EntityTypeCollection(new[] { typeof(UserInfo) }) , option => option.UseSqlite("Filename=data.db"));
-            //services.AddEFRepository(new EntityTypeProvider(new[] { typeof(UserInfo) }), option => option.UseInMemoryDatabase("data"));
-            //services.AddDapperRepository(new SqliteDbProvider($"Data Source={AppDomain.CurrentDomain.BaseDirectory}data.db"));
-          
             services.AddSqliteLogging();
             services.AddFileLogging();
             services.AddConsole();
-            var r = Assembly.GetEntryAssembly().GetAllAssemblies();
-            var types = Assembly.GetEntryAssembly().GetAllDefinedTypes();
+            //services.AddEFRepository(new EntityTypeCollection(new[] { typeof(LogInfo) }) , option => option.UseSqlite("Filename=data\\log\\log.db"));
+            //services.AddEFRepository(new EntityTypeCollection(new[] { typeof(LogInfo) }), option => option.UseInMemoryDatabase("data"));
+            services.AddDapperRepository(new SqliteDbProvider($"Data Source={AppDomain.CurrentDomain.BaseDirectory}data\\log\\log.db"));
 
+           
             IServiceProvider provider = services.BuildServiceProvider();
 #if DEBUG
             //services.AddLogging(builder => builder.AddDebug());

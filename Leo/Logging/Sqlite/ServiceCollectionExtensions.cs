@@ -13,7 +13,7 @@ namespace Leo.Logging.Sqlite
     {
         public static IServiceCollection AddSqliteLogging(this IServiceCollection services)
         {
-            string dir = $"{AppDomain.CurrentDomain.BaseDirectory }data\\log";
+            string dir = $"{AppDomain.CurrentDomain.BaseDirectory }\\data\\log";
             string path = $"DataSource={dir}\\log.db";
             if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
             return services.AddSqliteLogging(path);

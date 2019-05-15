@@ -12,7 +12,6 @@ namespace Leo.Data.Dapper
         public static IServiceCollection AddDapperRepository(this IServiceCollection services,IDbProvider dbProvider)
         {
             services.AddScoped<IUnitOfWork, DapperUnitOfWork>();
-            services.AddSingleton<ISqlBulider, SqlBulider>();
             services.AddSingleton<IDbProvider>(dbProvider);
             services.AddScoped(typeof(IRepository<>),typeof(DapperRepository<>));
             return services;

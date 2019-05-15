@@ -52,7 +52,7 @@ namespace Leo.Data
         /// <summary>
         /// 是否允许空
         /// </summary>
-        public bool Nullable { set; get; }
+        public bool Nullable { set; get; } = true;
 
         /// <summary>
         /// 默认值
@@ -67,7 +67,7 @@ namespace Leo.Data
         /// <summary>
         /// 不可被更新。
         /// </summary>
-        public bool NoUpdate { get; set; }
+        public bool NoUpdate { get; set; } = false;
 
         public static bool TryGetColumnAttributes<T>(out Dictionary<string, ColumnAttribute> columnAttributes)
         {
