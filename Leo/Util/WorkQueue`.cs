@@ -11,7 +11,7 @@ namespace Leo.Util
     /// <typeparam name="T"></typeparam>
     /// <param name="sender"></param>
     /// <param name="e"></param>
-    public delegate void ItemDequeueEventHandler<T>(object sender, QueueEventArgs<T> e);
+    public delegate void ItemDequeueEventHandler<T>(object sender,QueueEventArgs<T> e);
     /// <summary>
     /// 工作队列。
     /// </summary>
@@ -36,7 +36,7 @@ namespace Leo.Util
         /// </summary>
         /// <param name="eachQueue">每个队列操作处理的对象个数。</param>
         /// <param name="action"></param>
-        public WorkQueue(int eachQueue, ItemDequeueEventHandler<IEnumerable<T>> action) : this()
+        public WorkQueue(int eachQueue,ItemDequeueEventHandler<IEnumerable<T>> action) : this()
         {
             EachQueue = eachQueue;
             AfterItemsDequeue += action;
@@ -140,6 +140,7 @@ namespace Leo.Util
                         if (queue.Count > 0)
                         {
                             int count = (queue.Count >= EachQueue ? EachQueue : queue.Count);
+
                             items = new List<T>();
                             for (int i = 0; i < count; i++)
                             {
@@ -152,16 +153,22 @@ namespace Leo.Util
                             }
                             else
                             {
+                               
                                 ThreadPool.QueueUserWorkItem(obj =>
                                 {
                                     AfterItemsDequeue?.Invoke(this, new QueueEventArgs<IEnumerable<T>>(items));
                                 });
+                              
                             }
                         }
-                        else
-                            isWorking = false;
                     }
                 }
+                else
+                {
+                    isWorking = false;
+                }
+                   
+
             }
         }
     }

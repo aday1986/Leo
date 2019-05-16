@@ -5,6 +5,7 @@ using Leo.Data;
 using Leo.Logging;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 
 namespace Leo.Tests.NET461
 {
@@ -12,8 +13,7 @@ namespace Leo.Tests.NET461
     public class RepositoryTest : TestBase
     {
         private static IEnumerable<IRepository<TestEntity>> repositories 
-            = ServiceProvider.GetServices<IRepository<TestEntity>>();
-
+            =  ServiceProvider.GetServices<IRepository<TestEntity>>();
 
         [TestMethod]
         public void Add()
@@ -21,7 +21,7 @@ namespace Leo.Tests.NET461
             ToDo(r =>
             {
                 r.Add(GetTestEntity());
-               IsTrue(r.SaveChanges() == 1);
+                IsTrue(r.SaveChanges() == 1);
             });
         }
 
@@ -65,15 +65,16 @@ namespace Leo.Tests.NET461
         [TestMethod]
         public void QueryPage()
         {
+            AddRange();
             List<Condition> conditions = new List<Condition>
             {
                 new Condition() { Key = "Guid", ConditionType = ConditionEnum.NotEqual, Value = "" }
             };
             ToDo(r =>
             {
-                var TestEntitys = r.QueryPage(conditions, 1, 20);
+                var TestEntitys = r.QueryPage(conditions, 2, 5);
                 Console.WriteLine(TestEntitys.Count());
-                IsTrue(TestEntitys.Count() == 20);
+                IsTrue(TestEntitys.Count() == 5);
             });
         }
 

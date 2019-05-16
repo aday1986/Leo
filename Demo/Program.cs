@@ -95,12 +95,10 @@ namespace Demo
             services.AddConfiguration();
             services.AddSqliteLogging();
             services.AddFileLogging();
-            services.AddConsole();
+            services.AddConsoleLogging();
             //services.AddEFRepository(new EntityTypeCollection(new[] { typeof(LogInfo) }) , option => option.UseSqlite("Filename=data\\log\\log.db"));
             //services.AddEFRepository(new EntityTypeCollection(new[] { typeof(LogInfo) }), option => option.UseInMemoryDatabase("data"));
             services.AddDapperRepository(new SqliteDbProvider($"Data Source={AppDomain.CurrentDomain.BaseDirectory}data\\log\\log.db"));
-
-           
             IServiceProvider provider = services.BuildServiceProvider();
 #if DEBUG
             //services.AddLogging(builder => builder.AddDebug());

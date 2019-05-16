@@ -27,7 +27,7 @@ namespace Leo.Tests.NET461
         }
         protected static IServiceProvider ServiceProvider { get; }
 
-        static TestBase()
+      static TestBase()
         {
             ServiceProvider = ConfigServices();
         }
@@ -38,9 +38,10 @@ namespace Leo.Tests.NET461
             services.AddConfiguration();
             services.AddSqliteLogging();
             services.AddFileLogging();
+            //services.AddConsoleLogging();
             services.AddEFRepository(new EntityTypeCollection(new[] { typeof(TestEntity) }), option => option.UseSqlite("Filename=data\\data.db"));
             services.AddDapperRepository(new SqliteDbProvider($"Data Source={AppDomain.CurrentDomain.BaseDirectory}\\data\\data.db"));
-
+           
             IServiceProvider provider = services.BuildServiceProvider();
            var db= provider.GetService<IDbProvider>();
             using (var conn= db.CreateConnection())

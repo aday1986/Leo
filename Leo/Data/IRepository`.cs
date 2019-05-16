@@ -5,11 +5,27 @@ using System.Text;
 
 namespace Leo.Data
 {
+    public delegate void EventHandler<T>(object sender, EventArgs<T> e);
     /// <summary>
     /// 表示一组数据库CURD的基础功能。
     /// </summary>
     public interface IRepository<T> where T : class
     {
+        event EventHandler<T> AfterAdd;
+        event EventHandler<T> BeforeAdd;
+        event EventHandler<T> AfterRemove;
+        event EventHandler<T> BeforeRemove;
+        event EventHandler<T> AfterUpdate;
+        event EventHandler<T> BeforeUpdate;
+        event EventHandler<IEnumerable<T>> AfterAddRange;
+        event EventHandler<IEnumerable<T>> BeforeAddRange;
+        event EventHandler<IEnumerable<T>> AfterRemoveRange;
+        event EventHandler<IEnumerable<T>> BeforeRemoveRange;
+        event EventHandler<IEnumerable<T>> AfterUpdateRange;
+        event EventHandler<IEnumerable<T>> BeforeUpdateRange;
+        event EventHandler<string> BeforeQuery;
+        event EventHandler<IEnumerable<T>> AfterQuery;
+        event EventHandler<int> AfterSaveChanges;
         /// <summary>
         /// 添加一个实体。
         /// </summary>
@@ -32,7 +48,7 @@ namespace Leo.Data
 
         IEnumerable<T> Query(IEnumerable<Condition> conditions);
 
-        IEnumerable<T> QueryPage(IEnumerable<Condition> conditions ,int index, int pagesize);
+        IEnumerable<T> QueryPage(IEnumerable<Condition> conditions, int index, int pagesize);
 
         T Get(params object[] keyvalues);
 

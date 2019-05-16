@@ -9,7 +9,7 @@ namespace Leo.Logging.Console
 {
     public static partial class ServiceCollectionExtensions
     {
-        public static IServiceCollection AddConsole(this IServiceCollection services)
+        public static IServiceCollection AddConsoleLogging(this IServiceCollection services)
         {
             var configuration = services.BuildServiceProvider().GetService<IConfiguration>();
             services.AddLogging(builder => builder.AddProvider(new ConsoleLoggerProvider(configuration)));
