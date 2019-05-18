@@ -20,10 +20,10 @@ namespace Leo.Data.Dapper
             this.unitOfWork = unitOfWork;
             this.dbProvider = dbProvider;
             this.logger = logger;
-            SetLog();
+            RegisterLogEvent();
         }
 
-        private void SetLog()
+        private void RegisterLogEvent()
         {
             if (logger != null)
             {

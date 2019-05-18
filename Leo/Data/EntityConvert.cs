@@ -7,11 +7,10 @@ using System.Reflection;
 
 namespace Leo.Data
 {
-    public static class IEntityExtensions
+    public static class EntityConvert
     {
-       
 
-        public static DataTable ToDataTable<T>(this IEnumerable<T> entities) where T : IEntity
+        public static DataTable ToDataTable<T>(this IEnumerable<T> entities)
         {
             if (entities == null || entities.Count() == 0)
                 return null;
@@ -44,7 +43,7 @@ namespace Leo.Data
                     };
                     if (column.DataType == typeof(string) && value.MaxLength.HasValue)
                         column.MaxLength = value.MaxLength.Value;
-                    if (Leo.Util.Convert.TryParse(value.DefaultValue,infos[att.Key].PropertyType,out object obj))
+                    if (Leo.Util.Converter.TryParse(value.DefaultValue, infos[att.Key].PropertyType, out object obj))
                         column.DefaultValue = obj;
                     if (value.IsPrimaryKey)
                         keys.Add(column);
@@ -67,17 +66,11 @@ namespace Leo.Data
                 }
             }
             return result;
-        } 
+        }
+
     }
 
-    public class TestModel : IEntity
-    {
-        [Key]
-        [Column(IsPrimaryKey =true,DefaultValue ="9")]
-        public int Id { get; set; }
-        [Column()]
-        public string Name { get; set; }
-    }
+   
 
 
 }

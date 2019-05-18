@@ -74,9 +74,6 @@ namespace Leo.Data
             return false;
         }
 
-        public static string ToCreateSql(this Type type)
-        {
-            throw new  NotImplementedException();
-        }
+       
     }
 }

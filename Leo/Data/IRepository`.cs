@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Leo.Data
 {
-    public delegate void EventHandler<T>(object sender, EventArgs<T> e);
+   
     /// <summary>
     /// 表示一组数据库CURD的基础功能。
     /// </summary>

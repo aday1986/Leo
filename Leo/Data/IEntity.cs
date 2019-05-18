@@ -8,8 +8,9 @@ namespace Leo.Data
     /// 所有实体类的基础接口。
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public interface IEntity
+    public interface IEntity<T>
     {
+        T Id { get; set; }
     }
 
 

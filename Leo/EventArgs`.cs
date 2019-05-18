@@ -2,9 +2,10 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Leo.Data
+namespace Leo
 {
-   public class EventArgs<T>:EventArgs
+    public delegate void EventHandler<T>(object sender, EventArgs<T> e);
+    public class EventArgs<T>:EventArgs
     {
         public EventArgs()
         {
