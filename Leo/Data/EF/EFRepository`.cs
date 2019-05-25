@@ -11,25 +11,11 @@ namespace Leo.Data.EF
     {
         private readonly EFContext db;
 
-        public event EventHandler<T> AfterAdd;
-        public event EventHandler<T> BeforeAdd;
-        public event EventHandler<T> AfterRemove;
-        public event EventHandler<T> BeforeRemove;
-        public event EventHandler<T> AfterUpdate;
-        public event EventHandler<T> BeforeUpdate;
-        public event EventHandler<IEnumerable<T>> AfterAddRange;
-        public event EventHandler<IEnumerable<T>> BeforeAddRange;
-        public event EventHandler<IEnumerable<T>> AfterRemoveRange;
-        public event EventHandler<IEnumerable<T>> BeforeRemoveRange;
-        public event EventHandler<IEnumerable<T>> AfterUpdateRange;
-        public event EventHandler<IEnumerable<T>> BeforeUpdateRange;
-        public event EventHandler<string> BeforeQuery;
-        public event EventHandler<IEnumerable<T>> AfterQuery;
-        public event EventHandler<int> AfterSaveChanges;
-
         public EFRepository(EFContext db)
         {
             this.db = db;
+          
+          
         }
 
         public void Add(T entity)

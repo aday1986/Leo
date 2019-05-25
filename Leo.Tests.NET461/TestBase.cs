@@ -38,7 +38,7 @@ namespace Leo.Tests.NET461
             services.AddConfiguration();
             services.AddSqliteLogging();
             services.AddFileLogging();
-            //services.AddConsoleLogging();
+            services.AddConsoleLogging();
             services.AddEFRepository(new EntityTypeCollection(new[] { typeof(TestEntity) }), option => option.UseSqlite("Filename=data\\data.db"));
             services.AddDapperRepository(new SqliteDbProvider($"Data Source={AppDomain.CurrentDomain.BaseDirectory}\\data\\data.db"));
            

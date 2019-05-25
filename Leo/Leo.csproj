@@ -18,6 +18,7 @@
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard2.0|AnyCPU'">
     <CodeAnalysisRuleSet>Leo.ruleset</CodeAnalysisRuleSet>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
 
   <ItemGroup>
@@ -59,6 +60,9 @@
 
   <ItemGroup>
     <Folder Include="Caching\" />
+    <Folder Include="Data1\Expressions\ValueObjects\" />
+    <Folder Include="Data1\Sqlite\" />
+    <Folder Include="Data1\SqlServer\" />
   </ItemGroup>
 
 </Project>

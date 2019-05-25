@@ -42,6 +42,11 @@ namespace Leo.Util
             AfterItemsDequeue += action;
         }
 
+        static WorkQueue()
+        {
+            //ThreadPool.SetMaxThreads(10, 10);
+        }
+
         public WorkQueue()
         {
             queue = new Queue<T>();
@@ -50,7 +55,7 @@ namespace Leo.Util
         /// <summary>
         /// <see cref="T"/>剩余未处理的数量。
         /// </summary>
-        public int ItemCount { get { return queue.Count; } }
+        public int QueueCount { get { return queue.Count; } }
 
         /// <summary>
         /// 每次队列处理<see cref="T"/>数量。

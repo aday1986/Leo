@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Leo
 {
-    public delegate void EventHandler<T>(object sender, EventArgs<T> e);
+    public delegate void EventHandler<T>(object sender, T e);
     public class EventArgs<T>:EventArgs
     {
         public EventArgs()

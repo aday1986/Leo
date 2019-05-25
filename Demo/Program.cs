@@ -18,6 +18,8 @@ using Microsoft.Extensions.Logging;
 using System.Threading;
 using Leo.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Leo.Util.Planning;
+using Leo.Data1.Expressions;
 
 namespace Demo
 {
@@ -33,6 +35,13 @@ namespace Demo
                 Console.WriteLine("1.add;2.query,3.log");
                 switch (Console.ReadLine())
                 {
+                    case "1":
+                        string p1 = "a";
+                        DateTime p2 = DateTime.Now;
+                        SqlLambda<LogInfo> sqlLambda = new SqlLambda<LogInfo>();
+                        sqlLambda.Select(t => new { t.CreateTime,b= t.Id, aaa = AggFunc.Sum(t.Message) })
+                            .Where(t=>t.Id==10 && (t.Message==p1 || t.Message==p1) && t.CreateTime==p2);
+                        break;
                     case "log":
                         Stopwatch logWatch = new Stopwatch();
                         logWatch.Start();
@@ -85,7 +94,7 @@ namespace Demo
                         break;
                 }
                 stopwatch.Stop();
-             if(stopwatch.Elapsed.TotalSeconds>0) Console.WriteLine($"共用时{stopwatch.Elapsed.TotalSeconds}秒。");
+                if (stopwatch.Elapsed.TotalSeconds > 0) Console.WriteLine($"共用时{stopwatch.Elapsed.TotalSeconds}秒。");
             }
         }
 

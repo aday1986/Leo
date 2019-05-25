@@ -17,63 +17,20 @@ namespace Leo.Data.Dapper
 
         public DapperRepository(IUnitOfWork unitOfWork, IDbProvider dbProvider, ILogger<DapperRepository<T>> logger = null)
         {
+
             this.unitOfWork = unitOfWork;
             this.dbProvider = dbProvider;
             this.logger = logger;
-            RegisterLogEvent();
         }
-
-        private void RegisterLogEvent()
-        {
-            if (logger != null)
-            {
-                AfterAdd += (s, e) => { logger.LogInformation($"After add {e.Item}."); };
-                BeforeAdd += (s, e) => { logger.LogInformation($"Before add {e.Item}."); };
-                AfterRemove += (s, e) => { logger.LogInformation($"After remove {e.Item}."); };
-                BeforeRemove += (s, e) => { logger.LogInformation($"Before remove {e.Item}."); };
-                AfterUpdate += (s, e) => { logger.LogInformation($"After update {e.Item}."); };
-                BeforeUpdate += (s, e) => { logger.LogInformation($"Before Update {e.Item}."); };
-                AfterAddRange += (s, e) => { logger.LogInformation($"After add range {e.Item},ItemCount={e.Item.Count()}."); };
-                BeforeAddRange += (s, e) => { logger.LogInformation($"Before add range {e.Item},ItemCount={e.Item.Count()}."); };
-                AfterRemoveRange += (s, e) => { logger.LogInformation($"After remove range {e.Item},ItemCount={e.Item.Count()}."); };
-                BeforeRemoveRange += (s, e) => { logger.LogInformation($"Before remove range {e.Item},ItemCount={e.Item.Count()}."); };
-                AfterUpdateRange += (s, e) => { logger.LogInformation($"After update range {e.Item},ItemCount={e.Item.Count()}."); };
-                BeforeUpdateRange += (s, e) => { logger.LogInformation($"Before update range {e.Item},ItemCount={e.Item.Count()}."); };
-                BeforeQuery += (s, e) => { logger.LogInformation($"Before Query,Sql={e.Item}."); };
-                AfterQuery += (s, e) => { logger.LogInformation($"After query,ItemCount={e.Item.Count()}."); };
-                AfterSaveChanges += (s, e) => { logger.LogInformation($"After save changes,RowCount={e.Item}."); };
-            }
-        }
-
-        public event EventHandler<T> AfterAdd;
-        public event EventHandler<T> BeforeAdd;
-        public event EventHandler<T> AfterRemove;
-        public event EventHandler<T> BeforeRemove;
-        public event EventHandler<T> AfterUpdate;
-        public event EventHandler<T> BeforeUpdate;
-        public event EventHandler<IEnumerable<T>> AfterAddRange;
-        public event EventHandler<IEnumerable<T>> BeforeAddRange;
-        public event EventHandler<IEnumerable<T>> AfterRemoveRange;
-        public event EventHandler<IEnumerable<T>> BeforeRemoveRange;
-        public event EventHandler<IEnumerable<T>> AfterUpdateRange;
-        public event EventHandler<IEnumerable<T>> BeforeUpdateRange;
-        public event EventHandler<string> BeforeQuery;
-        public event EventHandler<IEnumerable<T>> AfterQuery;
-        public event EventHandler<int> AfterSaveChanges;
-
 
         public void Add(T entity)
         {
-            BeforeAdd?.Invoke(this, new EventArgs<T>(entity));
             unitOfWork.Execute(tran => tran.Connection.Execute(dbProvider.GetInsertSql<T>(), entity, tran));
-            AfterAdd?.Invoke(this, new EventArgs<T>(entity));
         }
 
         public void AddRange(IEnumerable<T> entities)
         {
-            BeforeAddRange?.Invoke(this, new EventArgs<IEnumerable<T>>(entities));
-            unitOfWork.Execute(tran => tran.Connection.Execute(dbProvider.GetInsertSql<T>(), entities, tran));
-            AfterAddRange?.Invoke(this, new EventArgs<IEnumerable<T>>(entities));
+            unitOfWork.Execute(tran => tran.Connection.Execute(dbProvider.GetInsertSql<T>(), entities, tran)); 
         }
 
         public T Get(params object[] keyvalues)
@@ -112,9 +69,9 @@ namespace Leo.Data.Dapper
                     dynamicParameters.Add(param.Key, param.Value);
                 }
             }
-            BeforeQuery?.Invoke(this, new EventArgs<string>(sql));
+         
             var result = unitOfWork.Query(d => d.Query<T>(sql, dynamicParameters));
-            AfterQuery?.Invoke(this, new EventArgs<IEnumerable<T>>(result));
+          
             return result;
         }
 
@@ -132,45 +89,36 @@ namespace Leo.Data.Dapper
                     dynamicParameters.Add(param.Key, param.Value);
                 }
             }
-            BeforeQuery?.Invoke(this, new EventArgs<string>(sql));
+          
             var result = unitOfWork.Query(d => d.Query<T>(sql, dynamicParameters));
-            AfterQuery?.Invoke(this, new EventArgs<IEnumerable<T>>(result));
+          
             return result;
         }
 
         public void Remove(T entity)
         {
-            BeforeRemove?.Invoke(this, new EventArgs<T>(entity));
-            unitOfWork.Execute(tran => tran.Connection.Execute(dbProvider.GetDeleteSql<T>(), entity, tran));
-            AfterRemove?.Invoke(this, new EventArgs<T>(entity));
+            unitOfWork.Execute(tran => tran.Connection.Execute(dbProvider.GetDeleteSql<T>(), entity, tran));  
         }
 
         public void RemoveRange(IEnumerable<T> entities)
-        {
-            BeforeRemoveRange?.Invoke(this, new EventArgs<IEnumerable<T>>(entities));
-            unitOfWork.Execute(tran => tran.Connection.Execute(dbProvider.GetDeleteSql<T>(), entities, tran));
-            AfterRemoveRange?.Invoke(this, new EventArgs<IEnumerable<T>>(entities));
+        { 
+            unitOfWork.Execute(tran => tran.Connection.Execute(dbProvider.GetDeleteSql<T>(), entities, tran));  
         }
 
         public int SaveChanges()
         {
             var result = unitOfWork.SaveChanges();
-            AfterSaveChanges?.Invoke(this, new EventArgs<int>(result));
             return result;
         }
 
         public void Update(T entity)
         {
-            BeforeUpdate?.Invoke(this, new EventArgs<T>(entity));
-            unitOfWork.Execute(tran => tran.Connection.Execute(dbProvider.GetUpdateSql<T>(), entity, tran));
-            AfterUpdate?.Invoke(this, new EventArgs<T>(entity));
+            unitOfWork.Execute(tran => tran.Connection.Execute(dbProvider.GetUpdateSql<T>(), entity, tran));  
         }
 
         public void UpdateRange(IEnumerable<T> entities)
         {
-            BeforeUpdateRange?.Invoke(this, new EventArgs<IEnumerable<T>>(entities));
-            unitOfWork.Execute(tran => tran.Connection.Execute(dbProvider.GetUpdateSql<T>(), entities, tran));
-            AfterUpdateRange?.Invoke(this, new EventArgs<IEnumerable<T>>(entities));
+            unitOfWork.Execute(tran => tran.Connection.Execute(dbProvider.GetUpdateSql<T>(), entities, tran)); 
         }
     }
 }
