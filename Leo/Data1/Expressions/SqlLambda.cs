@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Leo.Data1.Expressions.Resolver;
-using Leo.Data1.Expressions.ValueObjects;
 
 namespace Leo.Data1.Expressions
 {

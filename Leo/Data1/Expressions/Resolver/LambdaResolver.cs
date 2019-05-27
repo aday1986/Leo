@@ -5,9 +5,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
-using Leo.Data1.Expressions.Builder;
 using Leo.Data1.Expressions.Resolver.ExpressionTree;
-using Leo.Data1.Expressions.ValueObjects;
 
 namespace Leo.Data1.Expressions.Resolver
 {
@@ -32,6 +30,8 @@ namespace Leo.Data1.Expressions.Resolver
             _builder = builder;
         }
 
+
+        #region Join
         public void Join<T1, T2>(Expression<Func<T1, T2, bool>> expression)
         {
             var joinExpression = GetBinaryExpression(expression.Body);
@@ -50,12 +50,11 @@ namespace Leo.Data1.Expressions.Resolver
         {
             _builder.Join(GetTableName<T1>(), GetTableName<T2>(), GetColumnName(leftExpression), GetColumnName(rightExpression));
         }
+        #endregion
 
-        public void OrderBy<T>(Expression<Func<T, object>> expression, bool desc = false)
-        {
-            var fieldName = GetColumnName(GetMemberExpression(expression.Body));
-            _builder.OrderBy(GetTableName<T>(), fieldName, desc);
-        }
+        #region Select
+
+        private static Type aggFunc = typeof(AggFunc);
 
         public void Select<T>(Expression<Func<T, object>> expression)
         {
@@ -96,7 +95,7 @@ namespace Leo.Data1.Expressions.Resolver
                 _builder.Select(GetTableName<T>(), GetColumnName(expression), member.Name);
         }
 
-        private static Type aggFunc = typeof(AggFunc);
+       
         private void Select<T>(MethodCallExpression expression, MemberInfo member)
         {
             if (expression.Method.ReflectedType == aggFunc)
@@ -109,6 +108,14 @@ namespace Leo.Data1.Expressions.Resolver
             }
 
         }
+        #endregion
+
+        #region OrderGroup
+        public void OrderBy<T>(Expression<Func<T, object>> expression, bool desc = false)
+        {
+            var fieldName = GetColumnName(GetMemberExpression(expression.Body));
+            _builder.OrderBy(GetTableName<T>(), fieldName, desc);
+        }
 
         public void GroupBy<T>(Expression<Func<T, object>> expression)
         {
@@ -120,7 +127,9 @@ namespace Leo.Data1.Expressions.Resolver
             var fieldName = GetColumnName(GetMemberExpression(expression));
             _builder.GroupBy(GetTableName<T>(), fieldName);
         }
+        #endregion
 
+        #region Where
         public void Where<T>(Expression<Func<T, bool>> expression)
         {
             var expressionTree = ResolveQuery((dynamic)expression.Body);
@@ -194,8 +203,65 @@ namespace Leo.Data1.Expressions.Resolver
                     throw new ArgumentException("Expected member expression");
             }
         }
+        #endregion
 
         #region Helpers
+
+        public static string GetColumnName<T>(Expression<Func<T, object>> selector)
+        {
+            return GetColumnName(GetMemberExpression(selector.Body));
+        }
+
+        public static string GetColumnName(Expression expression)
+        {
+            var member = GetMemberExpression(expression);
+            var column = member.Member.GetCustomAttributes(false).OfType<ColumnAttribute>().FirstOrDefault();
+            if (column != null)
+                return column.ColumnName;
+            else
+                return member.Member.Name;
+        }
+
+        public static string GetTableName<T>()
+        {
+            return GetTableName(typeof(T));
+        }
+
+        public static string GetTableName(Type type)
+        {
+            var column = type.GetCustomAttributes(false).OfType<TableAttribute>().FirstOrDefault();
+            if (column != null)
+                return column.TableName;
+            else
+                return type.Name;
+        }
+
+        private static string GetTableName(MemberExpression expression)
+        {
+            return GetTableName(expression.Member.DeclaringType);
+        }
+
+        private static BinaryExpression GetBinaryExpression(Expression expression)
+        {
+            if (expression is BinaryExpression)
+                return expression as BinaryExpression;
+
+            throw new ArgumentException("Binary expression expected");
+        }
+
+        private static MemberExpression GetMemberExpression(Expression expression)
+        {
+            switch (expression.NodeType)
+            {
+                case ExpressionType.MemberAccess:
+                    return expression as MemberExpression;
+                case ExpressionType.Convert:
+                    return GetMemberExpression((expression as UnaryExpression).Operand);
+            }
+
+            throw new ArgumentException("Member expression expected");
+        }
+
 
         private object GetExpressionValue(Expression expression)
         {
@@ -242,8 +308,6 @@ namespace Leo.Data1.Expressions.Resolver
         }
 
         #endregion
-
-
 
         void BuildSql(Node node)
         {
@@ -376,64 +440,6 @@ namespace Leo.Data1.Expressions.Resolver
                     throw new ArgumentException(string.Format("Unrecognized binary expression operation '{0}'", op.ToString()));
             }
         }
-
-        #region helpers
-        public static string GetColumnName<T>(Expression<Func<T, object>> selector)
-        {
-            return GetColumnName(GetMemberExpression(selector.Body));
-        }
-
-        public static string GetColumnName(Expression expression)
-        {
-            var member = GetMemberExpression(expression);
-            var column = member.Member.GetCustomAttributes(false).OfType<ColumnAttribute>().FirstOrDefault();
-            if (column != null)
-                return column.ColumnName;
-            else
-                return member.Member.Name;
-        }
-
-        public static string GetTableName<T>()
-        {
-            return GetTableName(typeof(T));
-        }
-
-        public static string GetTableName(Type type)
-        {
-            var column = type.GetCustomAttributes(false).OfType<TableAttribute>().FirstOrDefault();
-            if (column != null)
-                return column.TableName;
-            else
-                return type.Name;
-        }
-
-        private static string GetTableName(MemberExpression expression)
-        {
-            return GetTableName(expression.Member.DeclaringType);
-        }
-
-        private static BinaryExpression GetBinaryExpression(Expression expression)
-        {
-            if (expression is BinaryExpression)
-                return expression as BinaryExpression;
-
-            throw new ArgumentException("Binary expression expected");
-        }
-
-        private static MemberExpression GetMemberExpression(Expression expression)
-        {
-            switch (expression.NodeType)
-            {
-                case ExpressionType.MemberAccess:
-                    return expression as MemberExpression;
-                case ExpressionType.Convert:
-                    return GetMemberExpression((expression as UnaryExpression).Operand);
-            }
-
-            throw new ArgumentException("Member expression expected");
-        }
-
-        #endregion
 
 
         //public void QueryByIsIn<T>(Expression<Func<T, object>> expression, SqlLambdaBase sqlQuery)
