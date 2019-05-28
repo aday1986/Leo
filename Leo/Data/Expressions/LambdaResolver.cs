@@ -40,6 +40,13 @@ namespace Leo.Data.Expressions
             return AddParameter(exp.Value, member?.Name) + ",";
         }
 
+        private string Resolver(LambdaExpression exp, MemberInfo member)
+        {
+            string result = string.Empty;
+           result= Resolver((dynamic)exp.Body, member);
+            return result;
+        }
+
         private string Resolver(MemberExpression exp, MemberInfo member)
         {
             string result = string.Empty;
@@ -63,7 +70,7 @@ namespace Leo.Data.Expressions
             {
                 result += Resolver((dynamic)exp.Arguments[i], exp.Members[i]);
             }
-            result = result.TrimEnd(',');
+            //result = result.TrimEnd(',');
             return result;
         }
 
@@ -82,7 +89,15 @@ namespace Leo.Data.Expressions
             }
             else if (exp.Method.IsStatic)
             {
-                result += AddParameter(GetExpressionValue(exp), member?.Name) + ",";
+                try
+                {
+                    result += AddParameter(GetExpressionValue(exp), member?.Name) + ",";
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"获取静态值失败:\n{ex.Message}");
+                }
+                
             }
             return result;
         }
@@ -90,39 +105,58 @@ namespace Leo.Data.Expressions
         private string Resolver(UnaryExpression exp, MemberInfo member)
         {
             string result = string.Empty;
-          
-            result +=operationDictionary[exp.NodeType]+ Resolver((dynamic)exp.Operand, member);
+            switch (exp.NodeType)
+            {
+                case ExpressionType.Convert:
+                    result += Resolver((dynamic)exp.Operand, null);
+                    break;
+                default:
+                    result += operationDictionary[exp.NodeType] + Resolver((dynamic)exp.Operand, member);
+                    break;
+            }
             return result;
         }
 
         private string Resolver(BinaryExpression exp, MemberInfo member)
         {
             string result = string.Empty;
-            result += "(";
-            result += Resolver((dynamic)exp.Left, null).TrimEnd(',');
+          string left = Resolver((dynamic)exp.Left, null).TrimEnd(',');
+            if (exp.Left is BinaryExpression && HasChildBinary((BinaryExpression)exp.Left))
+                result += $"({left})";
+            else
+                result += left;
 
-            if ( exp.Right is ConstantExpression && ((ConstantExpression)exp.Right).Value==null)
+            if (exp.Right is ConstantExpression && ((ConstantExpression)exp.Right).Value == null)
             {
-                    switch (exp.NodeType)
-                    {
-                        case ExpressionType.Equal:
-                            result += " IS NULL";
-                            break;
-                        case ExpressionType.NotEqual:
-                            result += " IS NOT NULL";
-                            break;
-                        default:
-                            throw new Exception($"不支持{exp.NodeType.ToString()}。");
-                    }
+                switch (exp.NodeType)
+                {
+                    case ExpressionType.Equal:
+                        result += " IS NULL";
+                        break;
+                    case ExpressionType.NotEqual:
+                        result += " IS NOT NULL";
+                        break;
+                    default:
+                        throw new Exception($"不支持{exp.NodeType.ToString()}。");
+                }
             }
             else
             {
                 result += operationDictionary[exp.NodeType];
-                result += Resolver((dynamic)exp.Right, null).TrimEnd(',');
+                string right= Resolver((dynamic)exp.Right, null).TrimEnd(',');
+                if (exp.Right is BinaryExpression && HasChildBinary((BinaryExpression)exp.Right))
+                    result += $"({right})";
+                else
+                    result +=right;
+
             }
-           
-            result += ")";
+
             return result;
+        }
+
+        private bool HasChildBinary(BinaryExpression exp)
+        {
+            return (exp.Right is BinaryExpression || exp.Left is BinaryExpression);
         }
 
         #endregion
@@ -166,7 +200,7 @@ namespace Leo.Data.Expressions
     //Helper
     public partial class LambdaResolver
     {
-       
+
         private static string GetColumnName(MemberExpression exp)
         {
             var column = exp.Member.GetCustomAttributes<ColumnAttribute>(false).FirstOrDefault();
@@ -189,7 +223,7 @@ namespace Leo.Data.Expressions
             return GetTableName(exp.Member.DeclaringType);
         }
 
-       
+
 
         private object GetExpressionValue(Expression exp)
         {
@@ -206,7 +240,7 @@ namespace Leo.Data.Expressions
                     var obj = GetExpressionValue(memberExpr.Expression);
                     return ResolveValue((dynamic)memberExpr.Member, obj);
                 default:
-                    throw new ArgumentException("Expected constant exp");
+                    throw new ArgumentException($"{exp.NodeType}类型无法被编译成静态值。");
             }
         }
 
@@ -248,15 +282,31 @@ namespace Leo.Data.Expressions
         private const string PARAMETER_PREFIX = "p";
 
         private Dictionary<SqlPartEnum, List<string>> SqlPart { get; } = new Dictionary<SqlPartEnum, List<string>>();
-
+        private Dictionary<string, List<Tuple<string, string>>> OnJoins { get; }
+            = new Dictionary<string, List<Tuple<string, string>>>();
         private int CurrentParamIndex { get; set; }
 
         private string Source
         {
             get
             {
-                var joinExpression = string.Join(" ", SqlPart[SqlPartEnum.Join]);
-                return string.Format("{0} {1}", Adapter.Table(SqlPart[SqlPartEnum.From].First()), joinExpression);
+                string result = string.Empty;
+                foreach (var onJoin in OnJoins)
+                {
+                    SqlPart[SqlPartEnum.From].Remove(onJoin.Key);
+                    result += $"{Adapter.Table(onJoin.Key)} ";
+                    foreach (var item in onJoin.Value)
+                    {
+                        SqlPart[SqlPartEnum.From].Remove(item.Item1);
+                        result += $"{item.Item2} ";
+                    }
+                    result += ",";
+                }
+                foreach (var table in SqlPart[SqlPartEnum.From])
+                {
+                    result += $"{Adapter.Table(table)},";
+                }
+                return result.TrimEnd(',',' ');
             }
         }
 
@@ -265,9 +315,9 @@ namespace Leo.Data.Expressions
             get
             {
                 if (SqlPart[SqlPartEnum.Select].Count == 0)
-                    return string.Format("{0}.*", Adapter.Table(SqlPart[SqlPartEnum.From].First()));
+                    return "*";
                 else
-                    return string.Join(", ", SqlPart[SqlPartEnum.Select]);
+                    return string.Join(",", SqlPart[SqlPartEnum.Select]);
             }
         }
 
@@ -329,85 +379,57 @@ namespace Leo.Data.Expressions
 
         public IDictionary<string, object> Parameters { get; private set; } = new Dictionary<string, object>();
 
-        public void Group<T1>(Expression<Func<T1, object>> selector)
-        {
-            throw new NotImplementedException();
-        }
 
-        public void Group<T1, T2>(Expression<Func<T1, T2, object>> selector)
+        public void Join<T1, T2>(Expression<Func<T1, T2, bool>> on,JoinEnum joinEnum= JoinEnum.INNER)
         {
-            throw new NotImplementedException();
-        }
-
-        public void Group<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> selector)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Having<T1>(Expression<Func<T1, object>> selector)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Having<T1, T2>(Expression<Func<T1, T2, object>> selector)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Having<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> selector)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Join<T1, T2>(Expression<Func<T1, T2, bool>> on)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Join<T1, T2, T3>(Expression<Func<T1, T2, T3, bool>> on)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Order<T1>(Expression<Func<T1, object>> selector)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Order<T1, T2>(Expression<Func<T1, T2, object>> selector)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Order<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> selector)
-        {
-            throw new NotImplementedException();
+            string table1 = GetTableName<T1>();
+            string table2 = GetTableName<T2>();
+            if (!OnJoins.ContainsKey(table1))
+                OnJoins[table1] = new List<Tuple<string, string>>();
+            OnJoins[table1].Add(
+                new Tuple<string, string>(
+                    table2
+                , $"{joinEnum.ToString()} JOIN {Adapter.Table(GetTableName<T2>())} ON {Resolver((dynamic)on.Body, null)}"));
         }
 
         public void Select<T1>(Expression<Func<T1, object>> selector)
-        {
-            //匿名类中的常数字段，不能是变量。
-            AddTableName(GetTableName<T1>());
-            SqlPart[SqlPartEnum.Select].Add(Resolver((dynamic)selector.Body, null));
-        }
+         => resolver<T1>(selector, SqlPartEnum.Select);
 
         public void Select<T1, T2>(Expression<Func<T1, T2, object>> selector)
-        {
-            AddTableName(new string[] { GetTableName<T1>(), GetTableName<T2>() });
-            SqlPart[SqlPartEnum.Select].Add(Resolver((dynamic)selector.Body, null));
-        }
+         => resolver<T1, T2>(selector, SqlPartEnum.Select);
 
         public void Select<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> selector)
-        {
-            AddTableName(new string[] { GetTableName<T1>(), GetTableName<T2>(), GetTableName<T3>() });
-            SqlPart[SqlPartEnum.Select].Add(Resolver((dynamic)selector.Body, null));
-        }
+            => resolver<T1, T2, T3>(selector, SqlPartEnum.Select);
+
+        public void Order<T1>(Expression<Func<T1, object>> selector)
+            => resolver<T1>(selector, SqlPartEnum.Order);
+
+        public void Order<T1, T2>(Expression<Func<T1, T2, object>> selector)
+            => resolver<T1, T2>(selector, SqlPartEnum.Order);
+
+        public void Order<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> selector)
+            => resolver<T1, T2, T3>(selector, SqlPartEnum.Order);
+
+        public void Group<T1>(Expression<Func<T1, object>> selector)
+       => resolver<T1>(selector, SqlPartEnum.Group);
+
+        public void Group<T1, T2>(Expression<Func<T1, T2, object>> selector)
+          => resolver<T1, T2>(selector, SqlPartEnum.Group);
+
+        public void Group<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> selector)
+         => resolver<T1, T2, T3>(selector, SqlPartEnum.Group);
+
+        public void Having<T1>(Expression<Func<T1, bool>> selector)
+              => resolver<T1>(selector, SqlPartEnum.Having);
+
+        public void Having<T1, T2>(Expression<Func<T1, T2, bool>> selector)
+              => resolver<T1, T2>(selector, SqlPartEnum.Having);
+
+        public void Having<T1, T2, T3>(Expression<Func<T1, T2, T3, bool>> selector)
+          => resolver<T1, T2, T3>(selector, SqlPartEnum.Having);
 
         public void Where<T1>(Expression<Func<T1, bool>> conditions)
-        {
-            AddTableName(GetTableName<T1>());
-            SqlPart[SqlPartEnum.Where].Add(Resolver((dynamic)conditions.Body, null));
-        }
+       => resolver<T1>(conditions, SqlPartEnum.Where);
 
         public void Where<T1, T2>(Expression<Func<T1, T2, bool>> conditions)
         {
@@ -422,5 +444,24 @@ namespace Leo.Data.Expressions
         }
 
         #endregion
+
+        private void resolver<T1>(Expression selector, SqlPartEnum sqlPart)
+        {
+            //匿名类中的常数字段，不能是变量。
+            AddTableName(GetTableName<T1>());
+            SqlPart[sqlPart].Add(Resolver((dynamic)selector, null).TrimEnd(','));
+        }
+
+        private void resolver<T1, T2>(Expression selector, SqlPartEnum sqlPart)
+        {
+            AddTableName(new string[] { GetTableName<T1>(), GetTableName<T2>() });
+            SqlPart[sqlPart].Add(Resolver((dynamic)selector, null).TrimEnd(','));
+        }
+
+        private void resolver<T1, T2, T3>(Expression selector, SqlPartEnum sqlPart)
+        {
+            AddTableName(new string[] { GetTableName<T1>(), GetTableName<T2>(), GetTableName<T3>() });
+            SqlPart[sqlPart].Add(Resolver((dynamic)selector, null).TrimEnd(','));
+        }
     }
 }

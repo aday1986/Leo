@@ -10,10 +10,7 @@ namespace Leo.Data.Expressions
     /// </summary>
    public abstract class AggFunc
     {
-        public static string Left(string old,int start,int count)
-        {
-            return string.Empty;
-        }
+       
 
         public static int Count(object column)
         {
@@ -38,6 +35,14 @@ namespace Leo.Data.Expressions
         public static decimal Avg(object column)
         {
             return 0;
+        }
+    }
+
+    public abstract class SqlServerFunc:AggFunc
+    {
+        public static string Left(string old, int start, int count)
+        {
+            return string.Empty;
         }
     }
 }

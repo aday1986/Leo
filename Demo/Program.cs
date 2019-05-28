@@ -18,6 +18,7 @@ namespace Demo
 {
     public class TEST
     {
+        public string Str { get; set; }
         public static string Pro { get; } = "我是Pro";
         public const string ConstString = "abc";
         public static string Field = "我是Field";
@@ -43,10 +44,14 @@ namespace Demo
                 switch (Console.ReadLine())
                 {
                     case "1":
-                        Leo.Data.Expressions.LambdaResolver resolver = new LambdaResolver();
-                        resolver.Select<LogInfo>(t => new { me = AggFunc.Left(t.Message, 1, 2), m1 = TEST.Fun1(),
+                        LambdaResolver resolver = new LambdaResolver();
+                        resolver.Select<LogInfo>(t => new { me = SqlServerFunc.Left(t.Message, 1, 2), m1 = TEST.Fun1(),
                             f1=TEST.Field,p1=TEST.Pro, t.CreateTime,a="abcd",dt=DateTime.Now });
-                        resolver.Where<LogInfo>(t => t.CreateTime == DateTime.Now && (!(-t.Id==10) && t.Message==null || t.Message=="A"));
+                        resolver.Where<LogInfo>(t => t.CreateTime == DateTime.Now && (!(t.Id==10) && t.Message==null || t.Message=="A"));
+                        resolver.Order<LogInfo>(t => new { t.Id,t.LogLevel});
+                        resolver.Group<LogInfo>(t => new { t.Id, t.LogLevel });
+                        resolver.Having<LogInfo>(t => AggFunc.Sum(t.Id)==10);
+                        resolver.Join<LogInfo, TEST>((t1, t2) => t1.Message == t2.Str);
                         Console.WriteLine(resolver.QueryString);
                         foreach (var parm in resolver.Parameters)
                         {

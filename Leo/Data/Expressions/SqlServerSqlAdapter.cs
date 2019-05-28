@@ -52,7 +52,7 @@ namespace Leo.Data.Expressions
 
         public bool IsFunc(MethodInfo info)
         {
-            return (info.IsStatic && info.ReflectedType == typeof(AggFunc));
+            return (info.IsStatic && (info.ReflectedType == typeof(AggFunc) || info.ReflectedType==typeof(SqlServerFunc)));
            
         }
     }

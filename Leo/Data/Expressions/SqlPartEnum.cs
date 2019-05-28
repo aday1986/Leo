@@ -4,7 +4,6 @@
     {
         Select,
         From,
-        Join,
         Where,
         Order,
         Group,

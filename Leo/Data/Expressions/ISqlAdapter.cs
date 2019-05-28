@@ -20,6 +20,11 @@ namespace Leo.Data.Expressions
         string Func( string func, string parms, string alias=null);
         string Parameter(string parameterId, string alias = null);
 
+        /// <summary>
+        /// 判断是否为内部定义的函数。
+        /// </summary>
+        /// <param name="info"></param>
+        /// <returns></returns>
         bool IsFunc(MethodInfo info);
 
     }
