@@ -9,6 +9,19 @@ using Leo.Data1.Expressions.Adapter;
 
 namespace Leo.Data1.Expressions
 {
+
+    public enum SqlPartEnum
+    {
+        Select,
+        From,
+        Join,
+        Where,
+        Order,
+        Group,
+        Having
+
+    }
+
     /// <summary>
     /// 实现整个SQL的构建逻辑。
     /// </summary>
@@ -18,18 +31,7 @@ namespace Leo.Data1.Expressions
 
         private const string PARAMETER_PREFIX = "Param";
 
-        public List<string> TableNames { get; } = new List<string>();
-
-        public List<string> JoinExpressions { get; } = new List<string>();
-        public List<string> SelectionList { get; } = new List<string>();
-
-        public List<string> WhereConditions { get; } = new List<string>();
-
-        public List<string> OrderByList { get; } = new List<string>();
-
-        public List<string> GroupByList { get; } = new List<string>();
-
-        public List<string> HavingConditions { get; } = new List<string>();
+        public Dictionary<SqlPartEnum, List<string>> SqlPart { get; } = new Dictionary<SqlPartEnum, List<string>>();
 
         public List<string> SplitColumns { get; } = new List<string>();
 
@@ -39,8 +41,8 @@ namespace Leo.Data1.Expressions
         {
             get
             {
-                var joinExpression = string.Join(" ", JoinExpressions);
-                return string.Format("{0} {1}", Adapter.Table(TableNames.First()), joinExpression);
+                var joinExpression = string.Join(" ", SqlPart[SqlPartEnum.Join]);
+                return string.Format("{0} {1}", Adapter.Table(SqlPart[SqlPartEnum.From].First()), joinExpression);
             }
         }
 
@@ -48,10 +50,10 @@ namespace Leo.Data1.Expressions
         {
             get
             {
-                if (SelectionList.Count == 0)
-                    return string.Format("{0}.*", Adapter.Table(TableNames.First()));
+                if (SqlPart[SqlPartEnum.Select].Count == 0)
+                    return string.Format("{0}.*", Adapter.Table(SqlPart[SqlPartEnum.From].First()));
                 else
-                    return string.Join(", ", SelectionList);
+                    return string.Join(", ", SqlPart[SqlPartEnum.Select]);
             }
         }
 
@@ -59,10 +61,10 @@ namespace Leo.Data1.Expressions
         {
             get
             {
-                if (WhereConditions.Count == 0)
+                if (SqlPart[SqlPartEnum.Where].Count == 0)
                     return "";
                 else
-                    return "WHERE " + string.Join("", WhereConditions);
+                    return "WHERE " + string.Join("", SqlPart[SqlPartEnum.Where]);
             }
         }
 
@@ -70,10 +72,10 @@ namespace Leo.Data1.Expressions
         {
             get
             {
-                if (OrderByList.Count == 0)
+                if (SqlPart[SqlPartEnum.Order].Count == 0)
                     return "";
                 else
-                    return "ORDER BY " + string.Join(", ", OrderByList);
+                    return "ORDER BY " + string.Join(", ", SqlPart[SqlPartEnum.Order]);
             }
         }
 
@@ -81,10 +83,10 @@ namespace Leo.Data1.Expressions
         {
             get
             {
-                if (GroupByList.Count == 0)
+                if (SqlPart[SqlPartEnum.Group].Count == 0)
                     return "";
                 else
-                    return "GROUP BY " + string.Join(", ", GroupByList);
+                    return "GROUP BY " + string.Join(", ", SqlPart[SqlPartEnum.Group]);
             }
         }
 
@@ -92,14 +94,14 @@ namespace Leo.Data1.Expressions
         {
             get
             {
-                if (HavingConditions.Count == 0)
+                if (SqlPart[SqlPartEnum.Having].Count == 0)
                     return "";
                 else
-                    return "HAVING " + string.Join(" ", HavingConditions);
+                    return "HAVING " + string.Join(" ", SqlPart[SqlPartEnum.Having]);
             }
         }
 
-        public IDictionary<string, object> Parameters { get; private set; }               
+        public IDictionary<string, object> Parameters { get; private set; }
 
         public string QueryString
         {
@@ -110,18 +112,24 @@ namespace Leo.Data1.Expressions
         {
             if (pageNumber.HasValue)
             {
-                if (OrderByList.Count == 0)
+                if (SqlPart[SqlPartEnum.Order].Count == 0)
                     throw new Exception("Pagination requires the ORDER BY statement to be specified");
 
                 return Adapter.QueryStringPage(Source, Selection, Conditions, Order, pageSize, pageNumber.Value);
             }
-            
+
             return Adapter.QueryStringPage(Source, Selection, Conditions, Order, pageSize);
         }
 
         internal SqlQueryBuilder(string tableName, ISqlAdapter adapter)
         {
-            TableNames.Add(tableName);
+            var e = Enum.GetValues(typeof(SqlPartEnum));
+           
+            foreach (SqlPartEnum item in e)
+            {
+                SqlPart.Add(item, new List<string>());
+            }
+            SqlPart[SqlPartEnum.From].Add(tableName);
             Adapter = adapter;
             Parameters = new ExpandoObject();
             CurrentParamIndex = 0;
@@ -129,29 +137,29 @@ namespace Leo.Data1.Expressions
 
         public void BeginExpression()
         {
-            WhereConditions.Add("(");
+            SqlPart[SqlPartEnum.Where].Add("(");
         }
 
         public void EndExpression()
         {
-            WhereConditions.Add(")");
+            SqlPart[SqlPartEnum.Where].Add(")");
         }
 
         public void And()
         {
-            if (WhereConditions.Count > 0)
-                WhereConditions.Add(" AND ");
+            if (SqlPart[SqlPartEnum.Where].Count > 0)
+                SqlPart[SqlPartEnum.Where].Add(" AND ");
         }
 
         public void Or()
         {
-            if (WhereConditions.Count > 0)
-                WhereConditions.Add(" OR ");
+            if (SqlPart[SqlPartEnum.Where].Count > 0)
+                SqlPart[SqlPartEnum.Where].Add(" OR ");
         }
 
         public void Not()
         {
-            WhereConditions.Add(" NOT ");
+            SqlPart[SqlPartEnum.Where].Add(" NOT ");
         }
 
         public void QueryByField(string tableName, string fieldName, string op, object fieldValue)
@@ -162,7 +170,7 @@ namespace Leo.Data1.Expressions
                 op,
                 Adapter.Parameter(paramId));
 
-            WhereConditions.Add(newCondition);
+            SqlPart[SqlPartEnum.Where].Add(newCondition);
             AddParameter(paramId, fieldValue);
         }
 
@@ -173,18 +181,18 @@ namespace Leo.Data1.Expressions
                 Adapter.Field(tableName, fieldName),
                 Adapter.Parameter(paramId));
 
-            WhereConditions.Add(newCondition);
+            SqlPart[SqlPartEnum.Where].Add(newCondition);
             AddParameter(paramId, fieldValue);
         }
 
         public void QueryByFieldNull(string tableName, string fieldName)
         {
-            WhereConditions.Add(string.Format("{0} IS NULL", Adapter.Field(tableName, fieldName)));
+            SqlPart[SqlPartEnum.Where].Add(string.Format("{0} IS NULL", Adapter.Field(tableName, fieldName)));
         }
 
         public void QueryByFieldNotNull(string tableName, string fieldName)
         {
-            WhereConditions.Add(string.Format("{0} IS NOT NULL", Adapter.Field(tableName, fieldName)));
+            SqlPart[SqlPartEnum.Where].Add(string.Format("{0} IS NOT NULL", Adapter.Field(tableName, fieldName)));
         }
 
         public void QueryByFieldComparison(string leftTableName, string leftFieldName, string op,
@@ -195,10 +203,10 @@ namespace Leo.Data1.Expressions
             op,
             Adapter.Field(rightTableName, rightFieldName));
 
-            WhereConditions.Add(newCondition);
+            SqlPart[SqlPartEnum.Where].Add(newCondition);
         }
 
-      
+
 
         public void Join(string originalTableName, string joinTableName, string leftField, string rightField)
         {
@@ -206,8 +214,8 @@ namespace Leo.Data1.Expressions
                                            Adapter.Table(joinTableName),
                                            Adapter.Field(originalTableName, leftField),
                                            Adapter.Field(joinTableName, rightField));
-            TableNames.Add(joinTableName);
-            JoinExpressions.Add(joinString);
+            SqlPart[SqlPartEnum.From].Add(joinTableName);
+            SqlPart[SqlPartEnum.Join].Add(joinString);
             SplitColumns.Add(rightField);
         }
 
@@ -217,28 +225,48 @@ namespace Leo.Data1.Expressions
             if (desc)
                 order += " DESC";
 
-            OrderByList.Add(order);
+            SqlPart[SqlPartEnum.Order].Add(order);
         }
 
         public void Select(string tableName)
         {
             var selectionString = string.Format("{0}.*", Adapter.Table(tableName));
-            SelectionList.Add(selectionString);
+            SqlPart[SqlPartEnum.Select].Add(selectionString);
+        }
+
+        /// <summary>
+        /// 常数字段。
+        /// </summary>
+        /// <param name="value"></param>
+        /// <param name="alias"></param>
+        public void Select(object value, string alias)
+        {
+            var paramId = NextParamId();
+            AddParameter(paramId, value);
+            var selectionString = $"{Adapter.Parameter(paramId)} AS {alias}";
+            SqlPart[SqlPartEnum.Select].Add(selectionString);
         }
 
         public void Select(string tableName, string fieldName, string alias = null)
         {
-            SelectionList.Add(Adapter.Field(tableName, fieldName, alias));
+            SqlPart[SqlPartEnum.Select].Add(Adapter.Field(tableName, fieldName, alias));
         }
 
+        /// <summary>
+        /// 包含方法的字段。
+        /// </summary>
+        /// <param name="tableName"></param>
+        /// <param name="fieldName"></param>
+        /// <param name="selectFunction"></param>
+        /// <param name="alias"></param>
         public void Select(string tableName, string fieldName, string selectFunction, string alias)
         {
-            SelectionList.Add(Adapter.SelectFunction(tableName, fieldName, selectFunction, alias));
+            SqlPart[SqlPartEnum.Select].Add(Adapter.SelectFunction(tableName, fieldName, selectFunction, alias));
         }
 
         public void GroupBy(string tableName, string fieldName)
         {
-            GroupByList.Add(Adapter.Field(tableName, fieldName));
+            SqlPart[SqlPartEnum.Group].Add(Adapter.Field(tableName, fieldName));
         }
 
         #region helpers
@@ -250,7 +278,7 @@ namespace Leo.Data1.Expressions
 
         private void AddParameter(string key, object value)
         {
-            if(!Parameters.ContainsKey(key))
+            if (!Parameters.ContainsKey(key))
                 Parameters.Add(key, value);
         }
         #endregion
@@ -267,7 +295,7 @@ namespace Leo.Data1.Expressions
 
             var newCondition = string.Format("{0} IN ({1})", Adapter.Field(tableName, fieldName), innerQuery);
 
-            WhereConditions.Add(newCondition);
+            SqlPart[SqlPartEnum.Where].Add(newCondition);
         }
 
         public void QueryByIsIn(string tableName, string fieldName, IEnumerable<object> values)
@@ -280,7 +308,7 @@ namespace Leo.Data1.Expressions
             });
 
             var newCondition = string.Format("{0} IN ({1})", Adapter.Field(tableName, fieldName), string.Join(",", paramIds));
-            WhereConditions.Add(newCondition);
+            SqlPart[SqlPartEnum.Where].Add(newCondition);
         }
     }
 }

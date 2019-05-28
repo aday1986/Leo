@@ -1,46 +1,63 @@
-﻿using Leo.Account;
-using Leo.Config;
+﻿using Leo.Config;
 using Leo.Data;
 using Leo.Data.Dapper;
-using Leo.Data.EF;
+using Leo.Data.Expressions;
+using Leo.Logging;
 using Leo.Logging.Console;
+using Leo.Logging.File;
 using Leo.Logging.Sqlite;
-using Leo.ThirdParty.AutoMapper;
-using Leo.Util;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
-using Leo.Logging.File;
-using Microsoft.Extensions.Logging;
 using System.Threading;
-using Leo.Logging;
-using Microsoft.Extensions.DependencyInjection;
-using Leo.Util.Planning;
-using Leo.Data1.Expressions;
 
 namespace Demo
 {
+    public class TEST
+    {
+        public static string Pro { get; } = "我是Pro";
+        public const string ConstString = "abc";
+        public static string Field = "我是Field";
+        public static string Fun1()
+        {
+            return "我是Fun1";
+        }
+    }
+
     class Program
     {
         static void Main(string[] args)
         {
             IServiceProvider provider = ConfigureServices();
             var repository = provider.GetService<IRepository<LogInfo>>();
+          
+            DateTime p2 = DateTime.Now;
             while (true)
             {
                 Stopwatch stopwatch = new Stopwatch();
                 Console.WriteLine("1.add;2.query,3.log");
+                
                 switch (Console.ReadLine())
                 {
                     case "1":
-                        string p1 = "a";
-                        DateTime p2 = DateTime.Now;
-                        SqlLambda<LogInfo> sqlLambda = new SqlLambda<LogInfo>();
-                        sqlLambda.Select(t => new { t.CreateTime,b= t.Id, aaa = AggFunc.Sum(t.Message) })
-                            .Where(t=>t.Id==10 && (t.Message==p1 || t.Message==p1) && t.CreateTime==p2);
+                        Leo.Data.Expressions.LambdaResolver resolver = new LambdaResolver();
+                        resolver.Select<LogInfo>(t => new { me = AggFunc.Left(t.Message, 1, 2), m1 = TEST.Fun1(),
+                            f1=TEST.Field,p1=TEST.Pro, t.CreateTime,a="abcd",dt=DateTime.Now });
+                        resolver.Where<LogInfo>(t => t.CreateTime == DateTime.Now && (!(-t.Id==10) && t.Message==null || t.Message=="A"));
+                        Console.WriteLine(resolver.QueryString);
+                        foreach (var parm in resolver.Parameters)
+                        {
+                            Console.WriteLine($"{parm.Key}:{parm.Value}");
+                        }
+                        break;
+                    case "2":
+
+                        //Leo.Data1.Expressions.SqlLambda<LogInfo> lambda = new Leo.Data1.Expressions.SqlLambda<LogInfo>();
+                        //lambda.Select(t => new { a = p1 });
+                        //Console.WriteLine(lambda.QueryString);
                         break;
                     case "log":
                         Stopwatch logWatch = new Stopwatch();

@@ -12,7 +12,7 @@ namespace Leo.Data1.Expressions.Resolver
     /// <summary>
     /// <see cref="LambdaExpression"/>解析器。
     /// </summary>
-    partial class LambdaResolver 
+    partial class LambdaResolver
     {
         private Dictionary<ExpressionType, string> _operationDictionary
             = new Dictionary<ExpressionType, string>(){
@@ -32,9 +32,9 @@ namespace Leo.Data1.Expressions.Resolver
 
 
         #region Join
-        public void Join<T1, T2>(Expression<Func<T1, T2, bool>> expression)
+        public void Join<T1, T2>(Expression<Func<T1, T2, bool>> exp)
         {
-            var joinExpression = GetBinaryExpression(expression.Body);
+            var joinExpression = GetBinaryExpression(exp.Body);
             var leftExpression = GetMemberExpression(joinExpression.Left);
             var rightExpression = GetMemberExpression(joinExpression.Right);
 
@@ -56,83 +56,101 @@ namespace Leo.Data1.Expressions.Resolver
 
         private static Type aggFunc = typeof(AggFunc);
 
-        public void Select<T>(Expression<Func<T, object>> expression)
+        public void Select<T>(Expression<Func<T, object>> exp)
         {
-            Select<T>(expression.Body, null);
+            Select<T>(exp.Body, null);
         }
 
-        private void Select<T>(Expression expression, MemberInfo member)
+        private void Select<T>(Expression exp, MemberInfo member)
         {
-            switch (expression.NodeType)//可以在继续递归更深层。
+            switch (exp.NodeType)//可以在继续递归更深层。
             {
-                case ExpressionType.Parameter:
-                    _builder.Select(GetTableName(expression.Type));
-                    break;
-                case ExpressionType.Convert:
                 case ExpressionType.MemberAccess:
-                    Select<T>(GetMemberExpression(expression), member);
-                    break;
                 case ExpressionType.Call:
-                    Select<T>(expression as MethodCallExpression, member);
+                case ExpressionType.Constant:
+                    Select<T>((dynamic)exp, member);
+                    break;
+                case ExpressionType.Parameter:
+                    _builder.Select(GetTableName(exp.Type));
                     break;
                 case ExpressionType.New:
-                    var newExpression = expression as NewExpression;
+                    var newExpression = exp as NewExpression;
                     for (int i = 0; i < newExpression.Members.Count; i++)
                     {
-                        Select<T>(newExpression.Arguments[i], newExpression.Members[i]);
+                        Select<T>((dynamic)newExpression.Arguments[i], newExpression.Members[i]);
                     }
                     break;
                 default:
-                    throw new ArgumentException("Invalid expression");
+                    throw new ArgumentException("Invalid exp");
             }
         }
 
-        private void Select<T>(MemberExpression expression, MemberInfo member)
+        private void Select<T>(MemberExpression exp, MemberInfo member)
         {
-            if (expression.Type.IsClass && expression.Type != typeof(String))
-                _builder.Select(GetTableName(expression.Type));
+            if (exp.Expression == null && exp.Member.MemberType == MemberTypes.Property)//静态属性
+            {
+                var pro = exp.Member.ReflectedType.GetProperty(exp.Member.Name);
+                if (pro.GetMethod.IsStatic)
+                {  
+                object value = pro.GetValue(null, null);
+                    _builder.Select(value, member.Name);
+                }
+                else
+                {
+                    throw new Exception($"{pro.Name}没有静态Get方法。");
+                }
+            }
             else
-                _builder.Select(GetTableName<T>(), GetColumnName(expression), member.Name);
+                _builder.Select(GetTableName<T>(), GetColumnName(exp), member.Name);
         }
 
-       
-        private void Select<T>(MethodCallExpression expression, MemberInfo member)
+
+        private void Select<T>(MethodCallExpression exp, MemberInfo member)
         {
-            if (expression.Method.ReflectedType == aggFunc)
+            if (exp.Method.ReflectedType == aggFunc)
             {
-                _builder.Select(GetTableName<T>(), GetColumnName(expression.Arguments.FirstOrDefault()), expression.Method.Name, member.Name);
+              
+                foreach (var item in exp.Arguments)
+                {
+                    Select<T>((dynamic)item, null);
+                }
+                _builder.Select(GetTableName<T>(), GetColumnName(exp.Arguments.FirstOrDefault()), exp.Method.Name, member.Name);
             }
             else
             {
-                throw new ArgumentNullException($"{expression.Method.ReflectedType.Name}.{expression.Method.Name} not find.");
+                throw new ArgumentNullException($"{exp.Method.ReflectedType.Name}.{exp.Method.Name} not find.");
             }
+        }
 
+        private void Select<T>(ConstantExpression exp, MemberInfo member)
+        {
+            _builder.Select(exp.Value, member.Name);
         }
         #endregion
 
         #region OrderGroup
-        public void OrderBy<T>(Expression<Func<T, object>> expression, bool desc = false)
+        public void OrderBy<T>(Expression<Func<T, object>> exp, bool desc = false)
         {
-            var fieldName = GetColumnName(GetMemberExpression(expression.Body));
+            var fieldName = GetColumnName(GetMemberExpression(exp.Body));
             _builder.OrderBy(GetTableName<T>(), fieldName, desc);
         }
 
-        public void GroupBy<T>(Expression<Func<T, object>> expression)
+        public void GroupBy<T>(Expression<Func<T, object>> exp)
         {
-            GroupBy<T>(GetMemberExpression(expression.Body));
+            GroupBy<T>(GetMemberExpression(exp.Body));
         }
 
-        private void GroupBy<T>(MemberExpression expression)
+        private void GroupBy<T>(MemberExpression exp)
         {
-            var fieldName = GetColumnName(GetMemberExpression(expression));
+            var fieldName = GetColumnName(GetMemberExpression(exp));
             _builder.GroupBy(GetTableName<T>(), fieldName);
         }
         #endregion
 
         #region Where
-        public void Where<T>(Expression<Func<T, bool>> expression)
+        public void Where<T>(Expression<Func<T, bool>> exp)
         {
-            var expressionTree = ResolveQuery((dynamic)expression.Body);
+            var expressionTree = ResolveQuery((dynamic)exp.Body);
             BuildSql(expressionTree);
         }
 
@@ -200,114 +218,12 @@ namespace Leo.Data1.Expressions.Resolver
                 case ExpressionType.Constant:
                     return new ValueNode() { Value = GetExpressionValue(rootExpression) };
                 default:
-                    throw new ArgumentException("Expected member expression");
+                    throw new ArgumentException("Expected member exp");
             }
         }
         #endregion
 
-        #region Helpers
-
-        public static string GetColumnName<T>(Expression<Func<T, object>> selector)
-        {
-            return GetColumnName(GetMemberExpression(selector.Body));
-        }
-
-        public static string GetColumnName(Expression expression)
-        {
-            var member = GetMemberExpression(expression);
-            var column = member.Member.GetCustomAttributes(false).OfType<ColumnAttribute>().FirstOrDefault();
-            if (column != null)
-                return column.ColumnName;
-            else
-                return member.Member.Name;
-        }
-
-        public static string GetTableName<T>()
-        {
-            return GetTableName(typeof(T));
-        }
-
-        public static string GetTableName(Type type)
-        {
-            var column = type.GetCustomAttributes(false).OfType<TableAttribute>().FirstOrDefault();
-            if (column != null)
-                return column.TableName;
-            else
-                return type.Name;
-        }
-
-        private static string GetTableName(MemberExpression expression)
-        {
-            return GetTableName(expression.Member.DeclaringType);
-        }
-
-        private static BinaryExpression GetBinaryExpression(Expression expression)
-        {
-            if (expression is BinaryExpression)
-                return expression as BinaryExpression;
-
-            throw new ArgumentException("Binary expression expected");
-        }
-
-        private static MemberExpression GetMemberExpression(Expression expression)
-        {
-            switch (expression.NodeType)
-            {
-                case ExpressionType.MemberAccess:
-                    return expression as MemberExpression;
-                case ExpressionType.Convert:
-                    return GetMemberExpression((expression as UnaryExpression).Operand);
-            }
-
-            throw new ArgumentException("Member expression expected");
-        }
-
-
-        private object GetExpressionValue(Expression expression)
-        {
-            switch (expression.NodeType)
-            {
-                case ExpressionType.Constant:
-                    return (expression as ConstantExpression).Value;
-                case ExpressionType.Call:
-                    return ResolveMethodCall(expression as MethodCallExpression);
-                case ExpressionType.MemberAccess:
-                    var memberExpr = (expression as MemberExpression);
-                    var obj = GetExpressionValue(memberExpr.Expression);
-                    return ResolveValue((dynamic)memberExpr.Member, obj);
-                default:
-                    throw new ArgumentException("Expected constant expression");
-            }
-        }
-
-        private object ResolveMethodCall(MethodCallExpression callExpression)
-        {
-            var arguments = callExpression.Arguments.Select(GetExpressionValue).ToArray();
-            var obj = callExpression.Object != null ? GetExpressionValue(callExpression.Object) : arguments.First();
-
-            return callExpression.Method.Invoke(obj, arguments);
-        }
-
-        private object ResolveValue(PropertyInfo property, object obj)
-        {
-            return property.GetValue(obj, null);
-        }
-
-        private object ResolveValue(FieldInfo field, object obj)
-        {
-            return field.GetValue(obj);
-        }
-
-        #endregion
-
-        #region Fail functions
-
-        private void ResolveQuery(Expression expression)
-        {
-            throw new ArgumentException(string.Format("The provided expression '{0}' is currently not supported", expression.NodeType));
-        }
-
-        #endregion
+     
 
         void BuildSql(Node node)
         {
@@ -437,33 +353,137 @@ namespace Leo.Data1.Expressions.Resolver
                     _builder.Or();
                     break;
                 default:
-                    throw new ArgumentException(string.Format("Unrecognized binary expression operation '{0}'", op.ToString()));
+                    throw new ArgumentException(string.Format("Unrecognized binary exp operation '{0}'", op.ToString()));
             }
         }
 
+        #region Helpers
 
-        //public void QueryByIsIn<T>(Expression<Func<T, object>> expression, SqlLambdaBase sqlQuery)
+        public static string GetColumnName<T>(Expression<Func<T, object>> selector)
+        {
+            return GetColumnName(GetMemberExpression(selector.Body));
+        }
+
+        public static string GetColumnName(Expression exp)
+        {
+            var member = GetMemberExpression(exp);
+            var column = member.Member.GetCustomAttributes(false).OfType<ColumnAttribute>().FirstOrDefault();
+            if (column != null)
+                return column.ColumnName;
+            else
+                return member.Member.Name;
+        }
+
+        public static string GetTableName<T>()
+        {
+            return GetTableName(typeof(T));
+        }
+
+        public static string GetTableName(Type type)
+        {
+            var column = type.GetCustomAttributes(false).OfType<TableAttribute>().FirstOrDefault();
+            if (column != null)
+                return column.TableName;
+            else
+                return type.Name;
+        }
+
+        private static string GetTableName(MemberExpression exp)
+        {
+            return GetTableName(exp.Member.DeclaringType);
+        }
+
+        private static BinaryExpression GetBinaryExpression(Expression exp)
+        {
+            if (exp is BinaryExpression)
+                return exp as BinaryExpression;
+
+            throw new ArgumentException("Binary exp expected");
+        }
+
+        private static MemberExpression GetMemberExpression(Expression exp)
+        {
+            switch (exp.NodeType)
+            {
+                case ExpressionType.MemberAccess:
+                    return exp as MemberExpression;
+                case ExpressionType.Convert:
+                    return GetMemberExpression((exp as UnaryExpression).Operand);
+            }
+
+            throw new ArgumentException("Member exp expected");
+        }
+
+
+        private object GetExpressionValue(Expression exp)
+        {
+            switch (exp.NodeType)
+            {
+                case ExpressionType.Constant:
+                    return (exp as ConstantExpression).Value;
+                case ExpressionType.Call:
+                    return ResolveMethodCall(exp as MethodCallExpression);
+                case ExpressionType.MemberAccess:
+                    var memberExpr = (exp as MemberExpression);
+                    var obj = GetExpressionValue(memberExpr.Expression);
+                    return ResolveValue((dynamic)memberExpr.Member, obj);
+                default:
+                    throw new ArgumentException("Expected constant exp");
+            }
+        }
+
+        private object ResolveMethodCall(MethodCallExpression callExpression)
+        {
+            var arguments = callExpression.Arguments.Select(GetExpressionValue).ToArray();
+            var obj = callExpression.Object != null ? GetExpressionValue(callExpression.Object) : arguments.First();
+
+            return callExpression.Method.Invoke(obj, arguments);
+        }
+
+        private object ResolveValue(PropertyInfo property, object obj)
+        {
+            return property.GetValue(obj, null);
+        }
+
+        private object ResolveValue(FieldInfo field, object obj)
+        {
+            return field.GetValue(obj);
+        }
+
+        #endregion
+
+        #region Fail functions
+
+        private void ResolveQuery(Expression exp)
+        {
+            throw new ArgumentException(string.Format("The provided exp '{0}' is currently not supported", exp.NodeType));
+        }
+
+        #endregion
+
+
+        //public void QueryByIsIn<T>(Expression<Func<T, object>> exp, SqlLambdaBase sqlQuery)
         //{
-        //    var fieldName = GetColumnName(expression);
+        //    var fieldName = GetColumnName(exp);
         //    _builder.QueryByIsIn(GetTableName<T>(), fieldName, sqlQuery);
         //}
 
-        //public void QueryByIsIn<T>(Expression<Func<T, object>> expression, IEnumerable<object> values)
+        //public void QueryByIsIn<T>(Expression<Func<T, object>> exp, IEnumerable<object> values)
         //{
-        //    var fieldName = GetColumnName(expression);
+        //    var fieldName = GetColumnName(exp);
         //    _builder.QueryByIsIn(GetTableName<T>(), fieldName, values);
         //}
 
-        //public void QueryByNotIn<T>(Expression<Func<T, object>> expression, SqlLambdaBase sqlQuery)
+        //public void QueryByNotIn<T>(Expression<Func<T, object>> exp, SqlLambdaBase sqlQuery)
         //{
-        //    var fieldName = GetColumnName(expression);
+        //    var fieldName = GetColumnName(exp);
         //    _builder.Not();
         //    _builder.QueryByIsIn(GetTableName<T>(), fieldName, sqlQuery);
         //}
 
-        //public void QueryByNotIn<T>(Expression<Func<T, object>> expression, IEnumerable<object> values)
+        //public void QueryByNotIn<T>(Expression<Func<T, object>> exp, IEnumerable<object> values)
         //{
-        //    var fieldName = GetColumnName(expression);
+        //    var fieldName = GetColumnName(exp);
         //    _builder.Not();
         //    _builder.QueryByIsIn(GetTableName<T>(), fieldName, values);
         //}
