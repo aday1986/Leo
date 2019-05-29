@@ -14,12 +14,13 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 
+
 namespace Demo
 {
-    [Table(TableName ="AttTest" )]
+    [Table(TableName = "AttTest")]
     public class TEST
     {
-        [Column(ColumnName ="AttTestPro")]
+        [Column(ColumnName = "AttTestPro")]
         public string TestPro { get; set; }
         public static string Pro { get; } = "我是Pro";
         public const string ConstString = "abc";
@@ -34,18 +35,18 @@ namespace Demo
     {
         private static void Print(LambdaResolver resolver)
         {
-            Console.WriteLine(resolver.QueryString);
-            //foreach (var parm in resolver.Parameters)
-            //{
-            //    Console.WriteLine($"{parm.Key}:{parm.Value}");
-            //}
+            Console.WriteLine(resolver.QueryString(out Dictionary<string, object> param));
+            foreach (var parm in param)
+            {
+                Console.WriteLine($"{parm.Key}:{parm.Value}");
+            }
             resolver.Init();
         }
         static void Main(string[] args)
         {
             IServiceProvider provider = ConfigureServices();
             var repository = provider.GetService<IRepository<LogInfo>>();
-          
+
             DateTime p1 = DateTime.Now;
             string[] p2 = new string[] { "b", "a", "12b3", null };
             string p3 = "%sadf";
@@ -53,35 +54,24 @@ namespace Demo
             {
                 Stopwatch stopwatch = new Stopwatch();
                 Console.WriteLine("1.add;2.query,3.log");
-                
+
                 switch (Console.ReadLine())
                 {
                     case "1":
                         stopwatch.Start();
-                       
+                        var p = new LogInfo() { Message = "aaa", CreateTime = DateTime.Now };
                         LambdaResolver resolver = new LambdaResolver();
                         for (int i = 0; i < 10000; i++)
                         {
-                            resolver.Where<LogInfo>(t => AggFunc.In(t.Message, p2)
-                                                 && t.Message.Like(p3)
-                                                 );
-                            resolver.Select<LogInfo>(t => new { a = "adsfasdfdsa", b = p3, c = p1, d = DateTime.Now });
-                            resolver.Where<LogInfo>(t => AggFunc.In(t.Message, p2)
-                                               && t.Message.Like(p3)
-                                               );
-                            resolver.Select<LogInfo>(t => new { a = "adsfasdfdsa", b = p3, c = p1, d = DateTime.Now });
-                            resolver.Where<LogInfo>(t => AggFunc.In(t.Message, p2)
-                                               && t.Message.Like(p3)
-                                               );
-                            resolver.Select<LogInfo>(t => new { a = "adsfasdfdsa", b = p3, c = p1, d = DateTime.Now });
-                            resolver.Where<LogInfo>(t => AggFunc.In(t.Message, p2)
-                                               && t.Message.Like(p3)
-                                               );
-                            resolver.Select<LogInfo>(t => new { a = "adsfasdfdsa", b = p3, c = p1, d = DateTime.Now });
-                            Print(resolver);
+                            Console.WriteLine(resolver.UpdateSql(p));
+                            Console.WriteLine(resolver.DeleteSql<LogInfo>(t => t.EventId == 1));
+                            Console.WriteLine(resolver.InsertSql(p));
                         }
+                     
+                        //Print(resolver);
+
                         break;
-                 
+
                     case "log":
                         Stopwatch logWatch = new Stopwatch();
                         logWatch.Start();
@@ -102,7 +92,6 @@ namespace Demo
                                     Console.WriteLine($"进程{t1}共用时{logWatch.Elapsed.TotalSeconds}秒。");
                                     logWatch.Start();
                                 }
-
                             });
                             thread.Start();
                         }

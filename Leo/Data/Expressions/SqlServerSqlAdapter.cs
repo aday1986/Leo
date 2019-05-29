@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 
 namespace Leo.Data.Expressions
@@ -9,7 +11,7 @@ namespace Leo.Data.Expressions
         {
           return  string.IsNullOrEmpty(value) ? string.Empty : $" {value}";
         }
-        public string QueryString(string selection, string source, string conditions, string order, string grouping, string having)
+        public string QuerySql(string selection, string source, string conditions, string order, string grouping, string having)
         {
             return $"SELECT {selection} FROM {source}{N(conditions)}{N(order)}{N(grouping)}{N(having)}";
         }
@@ -57,6 +59,21 @@ namespace Leo.Data.Expressions
         {
             return (info.IsStatic && (info.ReflectedType == typeof(AggFunc) || info.ReflectedType==typeof(SqlServerFunc)));
            
+        }
+
+        public string InsertSql(IEnumerable<string> fields, string source)
+        {
+            return $"INSERT INTO {source}({string.Join(",",fields.Select(s=>$"[{s}]"))}) VALUES({string.Join(",",fields.Select(s=>$"@{s}"))})";
+        }
+
+        public string UpdateSql(IEnumerable<string> fields, string source, string conditions)
+        {
+            return $"UPDATE {source} SET {String.Join(",",fields.Select(s=>$"[{s}]=@{s}"))}{N(conditions)}";
+        }
+
+        public string DeleteSql( string source, string conditions)
+        {
+            return $"DELETE FROM {source}{N(conditions)}";
         }
     }
 }

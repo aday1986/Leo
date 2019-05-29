@@ -9,7 +9,7 @@ namespace Leo.Logging
     public class LogInfo
     {
         [Key]
-        [Column(IsIdentity =true)]
+        [Column(IsPrimaryKey =true, IsIdentity =true)]
         public int Id { get; set; }
         public DateTime CreateTime { get; set; }
         public string LogLevel { get; set; }

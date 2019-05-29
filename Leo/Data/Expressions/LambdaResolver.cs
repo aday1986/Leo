@@ -21,7 +21,7 @@ namespace Leo.Data.Expressions
         /// </summary>
         /// <param name="exp"></param>
         /// <returns></returns>
-        private string Resolver(Expression exp,MemberInfo member=null)
+        private string Resolver(Expression exp, MemberInfo member = null)
         {
             return Resolver((dynamic)exp, member);
         }
@@ -36,6 +36,8 @@ namespace Leo.Data.Expressions
             result = Resolver((dynamic)exp.Body, member).TrimEnd(',');
             return result;
         }
+
+
 
         private string Resolver(ParameterExpression exp, MemberInfo member)
         {
@@ -71,7 +73,7 @@ namespace Leo.Data.Expressions
                 else
                 {
                     result += AddParameter(value, member?.Name) + ",";
-                }   
+                }
             }
             else
             {
@@ -118,7 +120,7 @@ namespace Leo.Data.Expressions
             }
             else if (exp.Method.IsStatic)//静态非系统函数，直接获取值。
             {
-                    result += AddParameter(GetExpressionValue(exp), member?.Name) + ",";
+                result += AddParameter(GetExpressionValue(exp), member?.Name) + ",";
             }
             return result;
         }
@@ -185,6 +187,11 @@ namespace Leo.Data.Expressions
             return result;
         }
 
+        private string Resolver(MemberInitExpression exp, MemberInfo member)
+        {
+            throw new NotImplementedException($"无法解析{exp.NodeType.ToString()}，请尝试使用匿名对象。");
+        }
+
         /// <summary>
         /// 判断是否有子二元计算节点。
         /// </summary>
@@ -241,6 +248,12 @@ namespace Leo.Data.Expressions
         {
             var column = exp.Member.GetCustomAttributes<ColumnAttribute>(false).FirstOrDefault();
             return column?.ColumnName ?? exp.Member.Name;
+        }
+
+        private static string GetColumnName(PropertyInfo info)
+        {
+            var column = info.GetCustomAttributes<ColumnAttribute>(false).FirstOrDefault();
+            return column?.ColumnName ?? info.Name;
         }
 
         private static string GetTableName<T>()
@@ -420,6 +433,10 @@ namespace Leo.Data.Expressions
     //Public
     public partial class LambdaResolver
     {
+        /// <summary>
+        /// 用于存储Sql语句缓存。
+        /// </summary>
+        protected static Dictionary<string, string> SqlCache = new Dictionary<string, string>();
 
         public LambdaResolver()
         {
@@ -429,9 +446,79 @@ namespace Leo.Data.Expressions
 
         #region Public
 
-        public string QueryString
+        public string QueryString(out Dictionary<string, object> param)
         {
-            get { return Adapter.QueryString(Selection, Source, Conditions, Grouping, HavingText, OrderText); }
+            param = this.Parameters;
+            string result = Adapter.QuerySql(Selection, Source, Conditions, Grouping, HavingText, OrderText);
+            return result;
+        }
+
+        public string InsertSql<T>(T entity)
+        {
+            Init();
+            var modelType = typeof(T);
+            string tableName = GetTableName(modelType);
+            AddTableName(modelType);
+            var pros = modelType.GetProperties();
+            foreach (var pro in pros)
+            {
+                var att = pro.GetCustomAttribute<ColumnAttribute>();
+                if (att != null && (att.IsIdentity))
+                    continue;
+                this.Parameters.Add(GetColumnName(pro), pro.GetValue(entity));
+            }
+            var fields = Parameters.Select(p => p.Key).ToArray();
+            return Adapter.InsertSql(fields, Source);
+        }
+
+        public string UpdateSql<T>(T entity, Expression<Func<T, bool>> conditions = null)
+        {
+            Init();
+            var modelType = typeof(T);
+            string tableName = GetTableName(modelType);
+            AddTableName(modelType);
+            var pros = modelType.GetProperties();
+            foreach (var pro in pros)
+            {
+                var att = pro.GetCustomAttribute<ColumnAttribute>();
+                if (att != null && (att.IsPrimaryKey || att.IsIdentity || att.NoUpdate))
+                    continue;
+                this.Parameters.Add(GetColumnName(pro), pro.GetValue(entity));
+            }
+            var fields = Parameters.Select(p => p.Key).ToArray();
+           
+            if (conditions == null)//条件
+            {
+                if (modelType.TryGetKeyColumns(out Dictionary<string, ColumnAttribute> keys))
+                {
+                    string strConditions = string.Empty;
+                    foreach (var key in keys)
+                    {
+                        string columnNmae = key.Value.ColumnName ?? key.Key;
+                        strConditions += $"{Adapter.Field(tableName, columnNmae)}={Adapter.Parameter(columnNmae)} AND ";//条件
+                    }
+                    SqlPart[SqlPartEnum.Where].Add(strConditions.Remove(strConditions.Length - 5, 5));
+                }
+                else
+                {
+                    throw new Exception($"实体{modelType.Name}没有可被匹配的主键，无法更新。");
+                }
+            }
+            else
+            {
+                SqlPart[SqlPartEnum.Where].Add(Resolver(conditions));
+            }
+            return Adapter.UpdateSql(fields, Source, Conditions);
+        }
+
+        public string DeleteSql<T>(Expression<Func<T, bool>> conditions)
+        {
+            Init();
+            var modelType = typeof(T);
+            string tableName = GetTableName(modelType);
+            AddTableName(modelType);
+            SqlPart[SqlPartEnum.Where].Add(Resolver(conditions));
+            return Adapter.DeleteSql( Source, Conditions);
         }
 
         public Dictionary<string, object> Parameters { get; private set; }
@@ -460,6 +547,8 @@ namespace Leo.Data.Expressions
                     table2
                 , $"{joinEnum.ToString()} JOIN {Adapter.Table(GetTableName<T2>())} ON {Resolver((dynamic)on.Body, null)}"));
         }
+
+
 
         public void Select<T1>(Expression<Func<T1, object>> selector)
          => Resolver<T1>(selector, SqlPartEnum.Select);
