@@ -13,8 +13,20 @@ namespace Leo.Data.Expressions
     //Core
     public partial class LambdaResolver
     {
+        private void Resolver<T1>(Expression selector, SqlPartEnum sqlPart)
+        {
+            SqlPart[sqlPart].Add(Resolver(selector));
+        }
 
-        #region Resolver
+        private void Resolver<T1, T2>(Expression selector, SqlPartEnum sqlPart)
+        {
+            SqlPart[sqlPart].Add(Resolver(selector));
+        }
+
+        private void Resolver<T1, T2, T3>(Expression selector, SqlPartEnum sqlPart)
+        {
+            SqlPart[sqlPart].Add(Resolver(selector));
+        }
 
         /// <summary>
         /// 解析入口。
@@ -36,8 +48,6 @@ namespace Leo.Data.Expressions
             result = Resolver((dynamic)exp.Body, member).TrimEnd(',');
             return result;
         }
-
-
 
         private string Resolver(ParameterExpression exp, MemberInfo member)
         {
@@ -77,7 +87,7 @@ namespace Leo.Data.Expressions
             }
             else
             {
-                result += Field(GetTableName(exp.Member.ReflectedType), GetColumnName(exp), member?.Name) + ",";
+                result +=Adapter.Field(GetTableName(exp.Member.ReflectedType), GetColumnName(exp), member?.Name) + ",";
             }
             return result;
         }
@@ -106,7 +116,7 @@ namespace Leo.Data.Expressions
                         parms += Resolver(exp.Arguments[i]);
                     }
                     result += $"{Resolver(exp.Arguments[0]).TrimEnd(',')} " +
-                           $"{Func(exp.Method.Name, parms.TrimEnd(','))}";
+                           $"{Adapter.Func(exp.Method.Name, parms.TrimEnd(','))}";
                 }
                 else
                 {
@@ -115,7 +125,7 @@ namespace Leo.Data.Expressions
                     {
                         parms += Resolver(arg);
                     }
-                    result += Func(exp.Method.Name, parms.TrimEnd(','), member?.Name) + ",";
+                    result +=Adapter.Func(exp.Method.Name, parms.TrimEnd(','), member?.Name) + ",";
                 }
             }
             else if (exp.Method.IsStatic)//静态非系统函数，直接获取值。
@@ -191,53 +201,6 @@ namespace Leo.Data.Expressions
         {
             throw new NotImplementedException($"无法解析{exp.NodeType.ToString()}，请尝试使用匿名对象。");
         }
-
-        /// <summary>
-        /// 判断是否有子二元计算节点。
-        /// </summary>
-        /// <param name="exp"></param>
-        /// <returns></returns>
-        private bool HasChildBinary(BinaryExpression exp)
-        {
-            return exp.Right is BinaryExpression || exp.Left is BinaryExpression;
-        }
-
-        #endregion
-
-        private Dictionary<ExpressionType, string> operationDictionary
-            = new Dictionary<ExpressionType, string>(){
-                { ExpressionType.Equal, "="},
-                { ExpressionType.NotEqual, "!="},
-                { ExpressionType.GreaterThan, ">"},
-                { ExpressionType.LessThan, "<"},
-                { ExpressionType.GreaterThanOrEqual, ">="},
-                { ExpressionType.LessThanOrEqual, "<="},
-                { ExpressionType.And," AND "},
-                { ExpressionType.AndAlso," AND "},
-                { ExpressionType.Or," OR "},
-                { ExpressionType.OrElse," OR "},
-                 { ExpressionType.Not,"NOT "},
-                  { ExpressionType.Negate,"-"}
-            };
-
-        private string AddParameter(object value, string alias = null)
-        {
-            ++CurrentParamIndex;
-            string id = PARAM + CurrentParamIndex.ToString(CultureInfo.InvariantCulture);
-            this.Parameters.Add(id, value);
-            return Adapter.Parameter(id, alias);
-        }
-
-        private string Field(string tableName, string fieldName, string alias = null)
-        {
-            return Adapter.Field(tableName, fieldName, alias);
-        }
-
-        private string Func(string funcName, string parms, string alias = null)
-        {
-            return Adapter.Func(funcName, parms, alias);
-        }
-
     }
 
     //Helper
@@ -310,20 +273,54 @@ namespace Leo.Data.Expressions
                 }
             }
         }
+
+        /// <summary>
+        /// 判断是否有子二元计算节点。
+        /// </summary>
+        /// <param name="exp"></param>
+        /// <returns></returns>
+        private bool HasChildBinary(BinaryExpression exp)
+        {
+            return exp.Right is BinaryExpression || exp.Left is BinaryExpression;
+        }
+
+        private string AddParameter(object value, string alias = null)
+        {
+            ++CurrentParamIndex;
+            string id = PARAM + CurrentParamIndex.ToString(CultureInfo.InvariantCulture);
+            this.Parameters.Add(id, value);
+            return Adapter.Parameter(id, alias);
+        }
     }
 
     //Private
     public partial class LambdaResolver
     {
-        private ISqlAdapter Adapter { get; set; }
+        private static Dictionary<ExpressionType, string> operationDictionary
+          = new Dictionary<ExpressionType, string>(){
+                { ExpressionType.Equal, "="},
+                { ExpressionType.NotEqual, "!="},
+                { ExpressionType.GreaterThan, ">"},
+                { ExpressionType.LessThan, "<"},
+                { ExpressionType.GreaterThanOrEqual, ">="},
+                { ExpressionType.LessThanOrEqual, "<="},
+                { ExpressionType.And," AND "},
+                { ExpressionType.AndAlso," AND "},
+                { ExpressionType.Or," OR "},
+                { ExpressionType.OrElse," OR "},
+                 { ExpressionType.Not,"NOT "},
+                  { ExpressionType.Negate,"-"}
+          };
 
         private const string PARAM = "p";
+
+        private int CurrentParamIndex { get; set; }
+
+        private ISqlAdapter Adapter { get; set; }
 
         private Dictionary<SqlPartEnum, List<string>> SqlPart { get; set; }
 
         private Dictionary<string, List<Tuple<string, string>>> OnJoins { get; set; }
-
-        private int CurrentParamIndex { get; set; }
 
         private string Source
         {
@@ -433,10 +430,7 @@ namespace Leo.Data.Expressions
     //Public
     public partial class LambdaResolver
     {
-        /// <summary>
-        /// 用于存储Sql语句缓存。
-        /// </summary>
-        protected static Dictionary<string, string> SqlCache = new Dictionary<string, string>();
+        public Dictionary<string, object> Parameters { get; private set; }
 
         public LambdaResolver()
         {
@@ -444,7 +438,18 @@ namespace Leo.Data.Expressions
             this.Adapter = new SqlServerSqlAdapter();
         }
 
-        #region Public
+        public void Init()
+        {
+            Parameters = new Dictionary<string, object>();
+            this.SqlPart = new Dictionary<SqlPartEnum, List<string>>();
+            this.OnJoins = new Dictionary<string, List<Tuple<string, string>>>();
+            this.CurrentParamIndex = 0;
+            var e = Enum.GetValues(typeof(SqlPartEnum));
+            foreach (SqlPartEnum item in e)
+            {
+                SqlPart.Add(item, new List<string>());
+            }
+        }
 
         public string QueryString(out Dictionary<string, object> param)
         {
@@ -521,21 +526,6 @@ namespace Leo.Data.Expressions
             return Adapter.DeleteSql( Source, Conditions);
         }
 
-        public Dictionary<string, object> Parameters { get; private set; }
-
-        public void Init()
-        {
-            Parameters = new Dictionary<string, object>();
-            this.SqlPart = new Dictionary<SqlPartEnum, List<string>>();
-            this.OnJoins = new Dictionary<string, List<Tuple<string, string>>>();
-            this.CurrentParamIndex = 0;
-            var e = Enum.GetValues(typeof(SqlPartEnum));
-            foreach (SqlPartEnum item in e)
-            {
-                SqlPart.Add(item, new List<string>());
-            }
-        }
-
         public void Join<T1, T2>(Expression<Func<T1, T2, bool>> on, JoinEnum joinEnum = JoinEnum.INNER)
         {
             string table1 = GetTableName<T1>();
@@ -547,8 +537,6 @@ namespace Leo.Data.Expressions
                     table2
                 , $"{joinEnum.ToString()} JOIN {Adapter.Table(GetTableName<T2>())} ON {Resolver((dynamic)on.Body, null)}"));
         }
-
-
 
         public void Select<T1>(Expression<Func<T1, object>> selector)
          => Resolver<T1>(selector, SqlPartEnum.Select);
@@ -594,22 +582,5 @@ namespace Leo.Data.Expressions
 
         public void Where<T1, T2, T3>(Expression<Func<T1, T2, T3, bool>> conditions)
         => Resolver<T1, T2, T3>(conditions, SqlPartEnum.Where);
-
-        #endregion
-
-        private void Resolver<T1>(Expression selector, SqlPartEnum sqlPart)
-        {
-            SqlPart[sqlPart].Add(Resolver(selector));
-        }
-
-        private void Resolver<T1, T2>(Expression selector, SqlPartEnum sqlPart)
-        {
-            SqlPart[sqlPart].Add(Resolver(selector));
-        }
-
-        private void Resolver<T1, T2, T3>(Expression selector, SqlPartEnum sqlPart)
-        {
-            SqlPart[sqlPart].Add(Resolver(selector));
-        }
     }
 }
