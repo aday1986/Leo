@@ -16,9 +16,11 @@ using System.Threading;
 
 namespace Demo
 {
+    [Table(TableName ="AttTest" )]
     public class TEST
     {
-        public string Str { get; set; }
+        [Column(ColumnName ="AttTestPro")]
+        public string TestPro { get; set; }
         public static string Pro { get; } = "我是Pro";
         public const string ConstString = "abc";
         public static string Field = "我是Field";
@@ -30,12 +32,23 @@ namespace Demo
 
     class Program
     {
+        private static void Print(LambdaResolver resolver)
+        {
+            Console.WriteLine(resolver.QueryString);
+            //foreach (var parm in resolver.Parameters)
+            //{
+            //    Console.WriteLine($"{parm.Key}:{parm.Value}");
+            //}
+            resolver.Init();
+        }
         static void Main(string[] args)
         {
             IServiceProvider provider = ConfigureServices();
             var repository = provider.GetService<IRepository<LogInfo>>();
           
-            DateTime p2 = DateTime.Now;
+            DateTime p1 = DateTime.Now;
+            string[] p2 = new string[] { "b", "a", "12b3", null };
+            string p3 = "%sadf";
             while (true)
             {
                 Stopwatch stopwatch = new Stopwatch();
@@ -44,26 +57,31 @@ namespace Demo
                 switch (Console.ReadLine())
                 {
                     case "1":
+                        stopwatch.Start();
+                       
                         LambdaResolver resolver = new LambdaResolver();
-                        resolver.Select<LogInfo>(t => new { me = SqlServerFunc.Left(t.Message, 1, 2), m1 = TEST.Fun1(),
-                            f1=TEST.Field,p1=TEST.Pro, t.CreateTime,a="abcd",dt=DateTime.Now });
-                        resolver.Where<LogInfo>(t => t.CreateTime == DateTime.Now && (!(t.Id==10) && t.Message==null || t.Message=="A"));
-                        resolver.Order<LogInfo>(t => new { t.Id,t.LogLevel});
-                        resolver.Group<LogInfo>(t => new { t.Id, t.LogLevel });
-                        resolver.Having<LogInfo>(t => AggFunc.Sum(t.Id)==10);
-                        resolver.Join<LogInfo, TEST>((t1, t2) => t1.Message == t2.Str);
-                        Console.WriteLine(resolver.QueryString);
-                        foreach (var parm in resolver.Parameters)
+                        for (int i = 0; i < 10000; i++)
                         {
-                            Console.WriteLine($"{parm.Key}:{parm.Value}");
+                            resolver.Where<LogInfo>(t => AggFunc.In(t.Message, p2)
+                                                 && t.Message.Like(p3)
+                                                 );
+                            resolver.Select<LogInfo>(t => new { a = "adsfasdfdsa", b = p3, c = p1, d = DateTime.Now });
+                            resolver.Where<LogInfo>(t => AggFunc.In(t.Message, p2)
+                                               && t.Message.Like(p3)
+                                               );
+                            resolver.Select<LogInfo>(t => new { a = "adsfasdfdsa", b = p3, c = p1, d = DateTime.Now });
+                            resolver.Where<LogInfo>(t => AggFunc.In(t.Message, p2)
+                                               && t.Message.Like(p3)
+                                               );
+                            resolver.Select<LogInfo>(t => new { a = "adsfasdfdsa", b = p3, c = p1, d = DateTime.Now });
+                            resolver.Where<LogInfo>(t => AggFunc.In(t.Message, p2)
+                                               && t.Message.Like(p3)
+                                               );
+                            resolver.Select<LogInfo>(t => new { a = "adsfasdfdsa", b = p3, c = p1, d = DateTime.Now });
+                            Print(resolver);
                         }
                         break;
-                    case "2":
-
-                        //Leo.Data1.Expressions.SqlLambda<LogInfo> lambda = new Leo.Data1.Expressions.SqlLambda<LogInfo>();
-                        //lambda.Select(t => new { a = p1 });
-                        //Console.WriteLine(lambda.QueryString);
-                        break;
+                 
                     case "log":
                         Stopwatch logWatch = new Stopwatch();
                         logWatch.Start();

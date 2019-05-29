@@ -5,10 +5,13 @@ namespace Leo.Data.Expressions
 {
     public class SqlServerSqlAdapter : ISqlAdapter
     {
+        private string N(string value)
+        {
+          return  string.IsNullOrEmpty(value) ? string.Empty : $" {value}";
+        }
         public string QueryString(string selection, string source, string conditions, string order, string grouping, string having)
         {
-            return string.Format("SELECT {0} FROM {1} {2} {3} {4} {5}",
-                                 selection, source, conditions, order, grouping, having);
+            return $"SELECT {selection} FROM {source}{N(conditions)}{N(order)}{N(grouping)}{N(having)}";
         }
         public string QueryStringPage(string source, string selection, string conditions, string order,
             int pageSize)

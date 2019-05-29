@@ -8,9 +8,17 @@ namespace Leo.Data.Expressions
     /// <summary>
     /// 聚合函数。
     /// </summary>
-   public abstract class AggFunc
+   public static class AggFunc
     {
-       
+        public static bool In<T>(this T column,params T[] values)
+        {
+            return true;
+        }
+
+        public static bool Like(this string column,string value)
+        {
+            return true;
+        }
 
         public static int Count(object column)
         {
@@ -38,7 +46,7 @@ namespace Leo.Data.Expressions
         }
     }
 
-    public abstract class SqlServerFunc:AggFunc
+    public static class SqlServerFunc
     {
         public static string Left(string old, int start, int count)
         {
