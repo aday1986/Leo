@@ -1,4 +1,5 @@
-﻿using Leo.Config;
+﻿using ConsoleApp1.Models;
+using Leo.Config;
 using Leo.Data;
 using Leo.Data.Dapper;
 using Leo.Data.Expressions;
@@ -13,36 +14,31 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Leo.ThirdParty.Dapper;
 
 
 namespace Demo
 {
-    [Table(TableName = "AttTest")]
-    public class TEST
-    {
-        [Column(ColumnName = "AttTestPro")]
-        public string TestPro { get; set; }
-        public static string Pro { get; } = "我是Pro";
-        public const string ConstString = "abc";
-        public static string Field = "我是Field";
-        public static string Fun1()
+    
+
+   public class Test
         {
-            return "我是Fun1";
-        }
+        public string DJBH { get; set; }
+        public string SPDM { get; set; }
     }
 
     class Program
     {
         private static void Print(LambdaResolver resolver)
         {
-            Console.WriteLine(resolver.QueryString(out Dictionary<string, object> param));
-            foreach (var parm in param)
-            {
-                Console.WriteLine($"{parm.Key}:{parm.Value}");
-            }
-            resolver.Init();
+           
         }
-        static void Main(string[] args)
+
+        private static string GetValue(string value)
+        {
+            return value + "test";
+        }
+         static void Main(string[] args)
         {
             IServiceProvider provider = ConfigureServices();
             var repository = provider.GetService<IRepository<LogInfo>>();
@@ -59,19 +55,11 @@ namespace Demo
                 {
                     case "1":
                         stopwatch.Start();
-                        var p = new LogInfo() { Message = "aaa", CreateTime = DateTime.Now };
-                        LambdaResolver resolver = new LambdaResolver();
-                        for (int i = 0; i < 10000; i++)
-                        {
-                            Console.WriteLine(resolver.UpdateSql(p));
-                            Console.WriteLine(resolver.DeleteSql<LogInfo>(t => t.EventId == 1));
-                            Console.WriteLine(resolver.InsertSql(p));
-                        }
-                     
-                        //Print(resolver);
+                        IQuery<SDPHDMX> query = new Query<SDPHDMX>();
+                        var result = query.Join<SHANGPIN>((t1, t2) => t1.SPDM == t2.SPDM)
+                               .Select((t1, t2) => new Test() { DJBH = t1.DJBH, SPDM =GetValue( DateTime.Now.ToString("yyyy").ToString()) });
 
                         break;
-
                     case "log":
                         Stopwatch logWatch = new Stopwatch();
                         logWatch.Start();

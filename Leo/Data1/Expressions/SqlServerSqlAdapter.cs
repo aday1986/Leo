@@ -42,6 +42,7 @@ namespace Leo.Data.Expressions
 
         public string Field(string tableName, string fieldName, string alias = null)
         {
+            //实体字段的名称最终必须是属性名，即别名应该是属性名。
             return $"[{tableName}].[{fieldName}]{(string.IsNullOrEmpty(alias) || alias == fieldName ? "" : $" AS {alias}")}";
         }
 

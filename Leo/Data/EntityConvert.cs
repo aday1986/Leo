@@ -41,9 +41,9 @@ namespace Leo.Data
                         DataType = infos[att.Key].PropertyType,
                         Unique = value.Unique,
                     };
-                    if (column.DataType == typeof(string) && value.MaxLength.HasValue)
-                        column.MaxLength = value.MaxLength.Value;
-                    if (Leo.Util.Converter.TryParse(value.DefaultValue, infos[att.Key].PropertyType, out object obj))
+                    if (column.DataType == typeof(string) && value.Length>0)
+                        column.MaxLength = value.Length;
+                    if (Leo.Util.Converter.TryParse(value.DefaultVal, infos[att.Key].PropertyType, out object obj))
                         column.DefaultValue = obj;
                     if (value.IsPrimaryKey)
                         keys.Add(column);

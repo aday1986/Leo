@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
 using System.Dynamic;
 using System.Globalization;
 using System.Linq;
@@ -13,23 +15,18 @@ namespace Leo.Data.Expressions
     //Core
     public partial class LambdaResolver
     {
-        private void Resolver<T1>(Expression selector, SqlPartEnum sqlPart)
+        /// <summary>
+        /// 解析，并添加指定<see cref="SqlPartEnum"/>的表达式，外部调用递归函数集的入口。
+        /// </summary>
+        /// <param name="exp"></param>
+        /// <param name="sqlPart"></param>
+        private void Resolver(Expression exp, SqlPartEnum sqlPart)
         {
-            SqlPart[sqlPart].Add(Resolver(selector));
-        }
-
-        private void Resolver<T1, T2>(Expression selector, SqlPartEnum sqlPart)
-        {
-            SqlPart[sqlPart].Add(Resolver(selector));
-        }
-
-        private void Resolver<T1, T2, T3>(Expression selector, SqlPartEnum sqlPart)
-        {
-            SqlPart[sqlPart].Add(Resolver(selector));
+            SqlPart[sqlPart].Add(Resolver(exp));
         }
 
         /// <summary>
-        /// 解析入口。
+        /// 通过dynamic分配调用函数。
         /// </summary>
         /// <param name="exp"></param>
         /// <returns></returns>
@@ -38,6 +35,12 @@ namespace Leo.Data.Expressions
             return Resolver((dynamic)exp, member);
         }
 
+        /// <summary>
+        /// 解析Lambda表达式。
+        /// </summary>
+        /// <param name="exp"></param>
+        /// <param name="member"></param>
+        /// <returns></returns>
         private string Resolver(LambdaExpression exp, MemberInfo member)
         {
             string result = string.Empty;
@@ -45,14 +48,27 @@ namespace Leo.Data.Expressions
             {
                 Resolver(item, null);
             }
-            result = Resolver((dynamic)exp.Body, member).TrimEnd(',');
+            result = Resolver(exp.Body, member).TrimEnd(',');
             return result;
         }
 
+        /// <summary>
+        /// 解析表达式参数。
+        /// </summary>
+        /// <param name="exp"></param>
+        /// <param name="member"></param>
+        /// <returns></returns>
         private string Resolver(ParameterExpression exp, MemberInfo member)
         {
-            AddTableName(exp.Type);
-            return Adapter.Table(GetTableName(exp.Type)) + ".*,";
+            if (IsAnonymousType(exp.Type))
+            {
+                return "*";
+            }
+            else
+            {
+                AddTableName(exp.Type);
+                return Adapter.Table(GetTableName(exp.Type)) + ".*,";
+            }
         }
 
         /// <summary>
@@ -66,6 +82,12 @@ namespace Leo.Data.Expressions
             return AddParameter(exp.Value, member?.Name) + ",";
         }
 
+        /// <summary>
+        /// 解析属性字段参数。
+        /// </summary>
+        /// <param name="exp"></param>
+        /// <param name="member"></param>
+        /// <returns></returns>
         private string Resolver(MemberExpression exp, MemberInfo member)
         {
             string result = string.Empty;
@@ -87,21 +109,60 @@ namespace Leo.Data.Expressions
             }
             else
             {
-                result +=Adapter.Field(GetTableName(exp.Member.ReflectedType), GetColumnName(exp), member?.Name) + ",";
+                if (member!=null && IsAnonymousType(member.DeclaringType))//添加匿名类映射。
+                {
+                    AnonymousTypeMapper.Add(member,exp.Member);
+                }
+                  if (IsAnonymousType(exp.Member.DeclaringType))
+                {
+                    result += Adapter.Field(GetTableName(AnonymousTypeMapper[exp.Member].DeclaringType), GetColumnName(AnonymousTypeMapper[exp.Member]), member?.Name) + ",";
+                }
+                else
+                {
+                    result += Adapter.Field(GetTableName(exp.Member.ReflectedType), GetColumnName(exp.Member), member?.Name) + ",";
+                }
             }
             return result;
         }
 
+        /// <summary>
+        /// 解析新构建的匿名类。
+        /// </summary>
+        /// <param name="exp"></param>
+        /// <param name="member"></param>
+        /// <returns></returns>
         private string Resolver(NewExpression exp, MemberInfo member)
         {
             string result = string.Empty;
             for (int i = 0; i < exp.Members.Count; i++)
             {
-                result += Resolver((dynamic)exp.Arguments[i], exp.Members[i]);
+                result += Resolver(exp.Arguments[i], exp.Members[i]);
             }
             return result;
         }
 
+        /// <summary>
+        /// 解析新构建的非匿名类。
+        /// </summary>
+        /// <param name="exp"></param>
+        /// <param name="member"></param>
+        /// <returns></returns>
+        private string Resolver(MemberInitExpression exp, MemberInfo member)
+        {
+            string result = string.Empty;
+            foreach (MemberAssignment item in exp.Bindings)
+            {
+                result += Resolver(item.Expression, item.Member);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 解析方法函数。
+        /// </summary>
+        /// <param name="exp"></param>
+        /// <param name="member"></param>
+        /// <returns></returns>
         private string Resolver(MethodCallExpression exp, MemberInfo member)
         {
             string result = string.Empty;
@@ -125,16 +186,22 @@ namespace Leo.Data.Expressions
                     {
                         parms += Resolver(arg);
                     }
-                    result +=Adapter.Func(exp.Method.Name, parms.TrimEnd(','), member?.Name) + ",";
+                    result += Adapter.Func(exp.Method.Name, parms.TrimEnd(','), member?.Name) + ",";
                 }
             }
-            else if (exp.Method.IsStatic)//静态非系统函数，直接获取值。
+            else//非系统函数，直接获取值，并添加为参数。
             {
                 result += AddParameter(GetExpressionValue(exp), member?.Name) + ",";
             }
             return result;
         }
 
+        /// <summary>
+        /// 解析新建的数组对象。
+        /// </summary>
+        /// <param name="exp"></param>
+        /// <param name="member"></param>
+        /// <returns></returns>
         private string Resolver(NewArrayExpression exp, MemberInfo member)
         {
             string result = string.Empty;
@@ -145,6 +212,12 @@ namespace Leo.Data.Expressions
             return result.TrimEnd(',');
         }
 
+        /// <summary>
+        /// 解析一元表达式。
+        /// </summary>
+        /// <param name="exp"></param>
+        /// <param name="member"></param>
+        /// <returns></returns>
         private string Resolver(UnaryExpression exp, MemberInfo member)
         {
             string result = string.Empty;
@@ -160,6 +233,12 @@ namespace Leo.Data.Expressions
             return result;
         }
 
+        /// <summary>
+        /// 解析二元表达式。
+        /// </summary>
+        /// <param name="exp"></param>
+        /// <param name="member"></param>
+        /// <returns></returns>
         private string Resolver(BinaryExpression exp, MemberInfo member)
         {
             string result = string.Empty;
@@ -191,105 +270,8 @@ namespace Leo.Data.Expressions
                     result += $"({right})";
                 else
                     result += right;
-
             }
-
             return result;
-        }
-
-        private string Resolver(MemberInitExpression exp, MemberInfo member)
-        {
-            throw new NotImplementedException($"无法解析{exp.NodeType.ToString()}，请尝试使用匿名对象。");
-        }
-    }
-
-    //Helper
-    public partial class LambdaResolver
-    {
-
-        private static string GetColumnName(MemberExpression exp)
-        {
-            var column = exp.Member.GetCustomAttributes<ColumnAttribute>(false).FirstOrDefault();
-            return column?.ColumnName ?? exp.Member.Name;
-        }
-
-        private static string GetColumnName(PropertyInfo info)
-        {
-            var column = info.GetCustomAttributes<ColumnAttribute>(false).FirstOrDefault();
-            return column?.ColumnName ?? info.Name;
-        }
-
-        private static string GetTableName<T>()
-        {
-            return GetTableName(typeof(T));
-        }
-
-        private static string GetTableName(Type type)
-        {
-            var column = type.GetCustomAttributes<TableAttribute>(false).FirstOrDefault();
-            return column?.TableName ?? type.Name;
-        }
-
-        private object GetExpressionValue(Expression exp)
-        {
-            if (exp == null)
-                return null;
-            switch (exp.NodeType)
-            {
-                case ExpressionType.Constant://常数。
-                    return (exp as ConstantExpression).Value;
-                case ExpressionType.Call://静态方法。
-                    var callExp = (exp as MethodCallExpression);
-                    var arguments = callExp.Arguments.Select(GetExpressionValue).ToArray();
-                    var instance = callExp.Object != null ? GetExpressionValue(callExp.Object) : arguments.FirstOrDefault();
-                    return callExp.Method.Invoke(instance, arguments);
-                case ExpressionType.MemberAccess://静态属性或字段。
-                    var memberExpr = (exp as MemberExpression);
-                    var obj = GetExpressionValue(memberExpr.Expression);
-                    return ResolveValue((dynamic)memberExpr.Member, obj);
-                default:
-                    throw new ArgumentException($"{exp.NodeType}类型无法被编译成静态值。");
-            }
-        }
-
-        private object ResolveValue(PropertyInfo property, object obj)
-        {
-            return property.GetValue(obj, null);
-        }
-
-        private object ResolveValue(FieldInfo field, object obj)
-        {
-            return field.GetValue(obj);
-        }
-
-        private void AddTableName(params Type[] types)
-        {
-            foreach (var type in types)
-            {
-                string table = GetTableName(type);
-                if (!SqlPart[SqlPartEnum.From].Contains(table))
-                {
-                    SqlPart[SqlPartEnum.From].Add(table);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 判断是否有子二元计算节点。
-        /// </summary>
-        /// <param name="exp"></param>
-        /// <returns></returns>
-        private bool HasChildBinary(BinaryExpression exp)
-        {
-            return exp.Right is BinaryExpression || exp.Left is BinaryExpression;
-        }
-
-        private string AddParameter(object value, string alias = null)
-        {
-            ++CurrentParamIndex;
-            string id = PARAM + CurrentParamIndex.ToString(CultureInfo.InvariantCulture);
-            this.Parameters.Add(id, value);
-            return Adapter.Parameter(id, alias);
         }
     }
 
@@ -319,6 +301,11 @@ namespace Leo.Data.Expressions
         private ISqlAdapter Adapter { get; set; }
 
         private Dictionary<SqlPartEnum, List<string>> SqlPart { get; set; }
+
+        /// <summary>
+        /// 匿名类属性映射。
+        /// </summary>
+        private Dictionary<MemberInfo, MemberInfo> AnonymousTypeMapper { get; } = new Dictionary<MemberInfo, MemberInfo>();
 
         private Dictionary<string, List<Tuple<string, string>>> OnJoins { get; set; }
 
@@ -451,9 +438,8 @@ namespace Leo.Data.Expressions
             }
         }
 
-        public string QueryString(out Dictionary<string, object> param)
+        public string QueryString()
         {
-            param = this.Parameters;
             string result = Adapter.QuerySql(Selection, Source, Conditions, Grouping, HavingText, OrderText);
             return result;
         }
@@ -491,7 +477,7 @@ namespace Leo.Data.Expressions
                 this.Parameters.Add(GetColumnName(pro), pro.GetValue(entity));
             }
             var fields = Parameters.Select(p => p.Key).ToArray();
-           
+
             if (conditions == null)//条件
             {
                 if (modelType.TryGetKeyColumns(out Dictionary<string, ColumnAttribute> keys))
@@ -523,64 +509,165 @@ namespace Leo.Data.Expressions
             string tableName = GetTableName(modelType);
             AddTableName(modelType);
             SqlPart[SqlPartEnum.Where].Add(Resolver(conditions));
-            return Adapter.DeleteSql( Source, Conditions);
+            return Adapter.DeleteSql(Source, Conditions);
         }
 
-        public void Join<T1, T2>(Expression<Func<T1, T2, bool>> on, JoinEnum joinEnum = JoinEnum.INNER)
+        public void Join<T, TJoin>(Expression<Func<T, TJoin, bool>> on, JoinEnum joinEnum = JoinEnum.INNER)
         {
-            string table1 = GetTableName<T1>();
-            string table2 = GetTableName<T2>();
+            string table1 = IsAnonymousType(typeof(T)) ? OnJoins.Last().Key : GetTableName<T>();
+            string table2 = GetTableName<TJoin>();
             if (!OnJoins.ContainsKey(table1))
                 OnJoins[table1] = new List<Tuple<string, string>>();
             OnJoins[table1].Add(
                 new Tuple<string, string>(
                     table2
-                , $"{joinEnum.ToString()} JOIN {Adapter.Table(GetTableName<T2>())} ON {Resolver((dynamic)on.Body, null)}"));
+                , $"{joinEnum.ToString()} JOIN {Adapter.Table(GetTableName<TJoin>())} ON {Resolver((dynamic)on.Body, null)}"));
         }
 
-        public void Select<T1>(Expression<Func<T1, object>> selector)
-         => Resolver<T1>(selector, SqlPartEnum.Select);
+        public void Select<T1, TResult>(Expression<Func<T1, TResult>> selector)
+         => Resolver(selector, SqlPartEnum.Select);
 
-        public void Select<T1, T2>(Expression<Func<T1, T2, object>> selector)
-         => Resolver<T1, T2>(selector, SqlPartEnum.Select);
+        public void Select<T1, T2, TResult>(Expression<Func<T1, T2, TResult>> selector)
+         => Resolver(selector, SqlPartEnum.Select);
 
-        public void Select<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> selector)
-            => Resolver<T1, T2, T3>(selector, SqlPartEnum.Select);
+        public void Select<T1, T2, T3, TResult>(Expression<Func<T1, T2, T3, TResult>> selector)
+            => Resolver(selector, SqlPartEnum.Select);
 
         public void Order<T1>(Expression<Func<T1, object>> selector)
-            => Resolver<T1>(selector, SqlPartEnum.Order);
+            => Resolver(selector, SqlPartEnum.Order);
 
         public void Order<T1, T2>(Expression<Func<T1, T2, object>> selector)
-            => Resolver<T1, T2>(selector, SqlPartEnum.Order);
+            => Resolver(selector, SqlPartEnum.Order);
 
         public void Order<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> selector)
-            => Resolver<T1, T2, T3>(selector, SqlPartEnum.Order);
+            => Resolver(selector, SqlPartEnum.Order);
 
         public void Group<T1>(Expression<Func<T1, object>> selector)
-       => Resolver<T1>(selector, SqlPartEnum.Group);
+       => Resolver(selector, SqlPartEnum.Group);
 
         public void Group<T1, T2>(Expression<Func<T1, T2, object>> selector)
-          => Resolver<T1, T2>(selector, SqlPartEnum.Group);
+          => Resolver(selector, SqlPartEnum.Group);
 
         public void Group<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> selector)
-         => Resolver<T1, T2, T3>(selector, SqlPartEnum.Group);
+         => Resolver(selector, SqlPartEnum.Group);
 
         public void Having<T1>(Expression<Func<T1, bool>> selector)
-              => Resolver<T1>(selector, SqlPartEnum.Having);
+              => Resolver(selector, SqlPartEnum.Having);
 
         public void Having<T1, T2>(Expression<Func<T1, T2, bool>> selector)
-              => Resolver<T1, T2>(selector, SqlPartEnum.Having);
+              => Resolver(selector, SqlPartEnum.Having);
 
         public void Having<T1, T2, T3>(Expression<Func<T1, T2, T3, bool>> selector)
-          => Resolver<T1, T2, T3>(selector, SqlPartEnum.Having);
+          => Resolver(selector, SqlPartEnum.Having);
 
         public void Where<T1>(Expression<Func<T1, bool>> conditions)
-       => Resolver<T1>(conditions, SqlPartEnum.Where);
+       => Resolver(conditions, SqlPartEnum.Where);
 
         public void Where<T1, T2>(Expression<Func<T1, T2, bool>> conditions)
-        => Resolver<T1, T2>(conditions, SqlPartEnum.Where);
+        => Resolver(conditions, SqlPartEnum.Where);
 
         public void Where<T1, T2, T3>(Expression<Func<T1, T2, T3, bool>> conditions)
-        => Resolver<T1, T2, T3>(conditions, SqlPartEnum.Where);
+        => Resolver(conditions, SqlPartEnum.Where);
+
+        public override string ToString()
+        {
+            return this.QueryString();
+        }
     }
+
+    //Helper
+    public partial class LambdaResolver
+    {
+        /// <summary>
+        /// 判断是否匿名类。
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        private static bool IsAnonymousType(Type type)
+        {
+            return !type.IsVisible;
+        }
+
+        private static string GetColumnName(MemberInfo member)
+        {
+            var column = member.GetCustomAttributes<ColumnAttribute>(false).FirstOrDefault();
+            return column?.ColumnName ?? member.Name;
+        }
+
+        private static string GetColumnName(PropertyInfo info)
+        {
+            var column = info.GetCustomAttributes<ColumnAttribute>(false).FirstOrDefault();
+            return column?.ColumnName ?? info.Name;
+        }
+
+        private static string GetTableName<T>()
+        {
+            return GetTableName(typeof(T));
+        }
+
+        private static string GetTableName(Type type)
+        {
+            var column = type.GetCustomAttributes<TableAttribute>(false).FirstOrDefault();
+            return column?.TableName ?? type.Name;
+        }
+
+        private object GetExpressionValue(Expression exp)
+        {
+            if (exp == null)
+                return null;
+            switch (exp.NodeType)
+            {
+                case ExpressionType.Constant://常数。
+                    return (exp as ConstantExpression).Value;
+                case ExpressionType.Call://静态方法。
+                    var callExp = (exp as MethodCallExpression);
+                    var arguments = callExp.Arguments.Select(GetExpressionValue).ToArray();
+                    var instance = callExp.Object != null ? GetExpressionValue(callExp.Object) : arguments.FirstOrDefault();
+                    return callExp.Method.Invoke(instance, arguments);
+                case ExpressionType.MemberAccess://静态属性或字段。
+                    var memberExp = (exp as MemberExpression);
+                    var parentObj = GetExpressionValue(memberExp.Expression);
+                    switch (memberExp.Member.MemberType)
+                    {
+                        case MemberTypes.Property:
+                            return (memberExp.Member as PropertyInfo).GetValue(parentObj, null);
+                        case MemberTypes.Field:
+                            return (memberExp.Member as FieldInfo).GetValue(parentObj);
+                    }
+                    break;      
+            }
+            throw new ArgumentException($"{exp.NodeType}类型无法被编译成静态值。");
+        }
+
+        private void AddTableName(params Type[] types)
+        {
+            foreach (var type in types)
+            {
+                string table = GetTableName(type);
+                if (!SqlPart[SqlPartEnum.From].Contains(table))
+                {
+                    SqlPart[SqlPartEnum.From].Add(table);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 判断是否有子二元计算节点。
+        /// </summary>
+        /// <param name="exp"></param>
+        /// <returns></returns>
+        private bool HasChildBinary(BinaryExpression exp)
+        {
+            return exp.Right is BinaryExpression || exp.Left is BinaryExpression;
+        }
+
+        private string AddParameter(object value, string alias = null)
+        {
+            ++CurrentParamIndex;
+            string id = PARAM + CurrentParamIndex.ToString(CultureInfo.InvariantCulture);
+            this.Parameters.Add(id, value);
+            return Adapter.Parameter(id, alias);
+        }
+    }
+
 }

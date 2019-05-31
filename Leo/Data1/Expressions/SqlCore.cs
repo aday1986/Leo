@@ -4,7 +4,7 @@ using System.Data;
 using System.Linq;
 using System.Text;
 
-namespace Leo.Data1
+namespace Leo.Data
 {
 
     public class SqlCore 

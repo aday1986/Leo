@@ -25,7 +25,9 @@ namespace Leo.Data
         /// <summary>
         /// 长度
         /// </summary>
-        public int? MaxLength { set; get; }
+        public int Length { set; get; }
+
+        public string TypeName { get; set; }
 
         /// <summary>
         /// 精度
@@ -57,7 +59,7 @@ namespace Leo.Data
         /// <summary>
         /// 默认值
         /// </summary>
-        public string DefaultValue { set; get; }
+        public string DefaultVal { set; get; }
 
         /// <summary>
         /// 备注

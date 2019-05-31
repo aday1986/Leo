@@ -60,8 +60,6 @@
 
   <ItemGroup>
     <Folder Include="Caching\" />
-    <Folder Include="Data1\Sqlite\" />
-    <Folder Include="Data1\SqlServer\" />
   </ItemGroup>
 
 </Project>
