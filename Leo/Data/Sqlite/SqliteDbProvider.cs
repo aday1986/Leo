@@ -5,7 +5,7 @@ using System.Data.SQLite;
 using System.Text;
 using Leo.Data.Expressions;
 
-namespace Leo.Data
+namespace Leo.Data.Sqlite
 {
     public class SqliteDbProvider : IDbProvider
     {
@@ -39,7 +39,7 @@ namespace Leo.Data
 
         public ISqlAdapter CreateSqlAdapter()
         {
-            return new SqlServerSqlAdapter();
+            return new SqlClientSqlAdapter();
         }
     }
 }

@@ -6,7 +6,7 @@ using System.Data.SqlClient;
 using System.Text;
 using Leo.Data.Expressions;
 
-namespace Leo.Data
+namespace Leo.Data.SqlClient
 {
     public class SqlClientDbProvider : IDbProvider
     {
@@ -40,7 +40,7 @@ namespace Leo.Data
 
         public ISqlAdapter CreateSqlAdapter()
         {
-            return new SqlServerSqlAdapter();
+            return new SqlClientSqlAdapter();
         }
     }
 }

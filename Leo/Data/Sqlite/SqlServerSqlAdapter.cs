@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace Leo.Data.Expressions
+namespace Leo.Data.Sqlite
 {
-    public class SqlServerSqlAdapter : ISqlAdapter
+    public class SqliteSqlAdapter : ISqlAdapter
     {
         private string N(string value)
         {

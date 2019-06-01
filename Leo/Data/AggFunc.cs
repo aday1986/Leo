@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Leo.Data.Expressions
+namespace Leo.Data
 {
     /// <summary>
     /// 聚合函数。
     /// </summary>
-   public static class AggFunc
+    public static class AggFunc
     {
         public static bool In<T>(this T column,params T[] values)
         {
@@ -43,14 +43,6 @@ namespace Leo.Data.Expressions
         public static decimal Avg(object column)
         {
             return 0;
-        }
-    }
-
-    public static class SqlServerFunc
-    {
-        public static string Left(string old, int start, int count)
-        {
-            return string.Empty;
         }
     }
 }

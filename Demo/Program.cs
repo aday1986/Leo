@@ -2,6 +2,7 @@
 using Leo.Config;
 using Leo.Data;
 using Leo.Data.Expressions;
+using Leo.Data.Sqlite;
 using Leo.Logging.Console;
 using Leo.Logging.File;
 using Leo.Logging.Sqlite;
@@ -15,8 +16,6 @@ using System.Linq;
 namespace Demo
 {
 
-
-  
 
     class Program
     {
@@ -51,7 +50,6 @@ namespace Demo
                         Console.WriteLine(result.Count());
                         break;
                     default:
-                       
                         break;
                 }
                 stopwatch.Stop();

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace Leo.Data.Expressions
+namespace Leo.Data
 {
     public interface ISqlAdapter
     {
@@ -17,8 +17,6 @@ namespace Leo.Data.Expressions
 
         string QueryStringPage(string selection, string source, string conditions, string order,
             int pageSize);
-
-
 
         string Table(string tableName);
         string Field(string tableName, string fieldName, string alias = null);
