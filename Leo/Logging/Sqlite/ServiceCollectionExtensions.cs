@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
-using Leo.Data.Dapper;
 using Leo.Data;
 
 namespace Leo.Logging.Sqlite
@@ -25,7 +24,7 @@ namespace Leo.Logging.Sqlite
             //单独注入一个仓储
             SQLitePCL.Batteries.Init();
             IServiceCollection logservices = new ServiceCollection();
-            logservices.AddDapperRepository(new SqliteDbProvider(path));
+            logservices.AddRepository(new SqliteDbProvider(path));
             using (var db = logservices.BuildServiceProvider().GetService<IDbProvider>().CreateConnection())
             {
                 db.Open();

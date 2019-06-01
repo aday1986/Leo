@@ -26,7 +26,7 @@ namespace Leo.Logging.Sqlite
             {
                 lock (repository)//这里要锁实际调用的logService。
                 {
-                    repository.AddRange(e.Item);
+                    repository.Add(e.Item.ToArray());
                     repository.SaveChanges();
                 }
             });

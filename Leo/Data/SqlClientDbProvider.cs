@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
 using System.Text;
+using Leo.Data.Expressions;
 
 namespace Leo.Data
 {
@@ -16,25 +17,30 @@ namespace Leo.Data
             this.connectionString = connectionString;
         }
 
-        public override IDbDataAdapter CreateAdapter()
+        public IDbDataAdapter CreateAdapter()
         {
             return new SqlDataAdapter();
         }
 
-        public override IDbCommand CreateCommand()
+        public IDbCommand CreateCommand()
         {
             return new SqlCommand();
         }
 
-        public override IDbConnection CreateConnection()
+        public IDbConnection CreateConnection()
         {
             return new SqlConnection(connectionString);
 
         }
 
-        public override IDbDataParameter CreateDataParameter(string key, object value)
+        public IDbDataParameter CreateDataParameter(string key, object value)
         {
            return new SqlParameter(key,value);
+        }
+
+        public ISqlAdapter CreateSqlAdapter()
+        {
+            return new SqlServerSqlAdapter();
         }
     }
 }

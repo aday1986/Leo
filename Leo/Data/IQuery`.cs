@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq.Expressions;
 
-namespace Leo.Data.Expressions
+namespace Leo.Data
 {
     public interface IQuery<T>
     {

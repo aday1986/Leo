@@ -89,5 +89,17 @@ namespace Leo.Data
             return type.TryGetKeyColumns(out keyColumns);
         }
 
+       public static string GetColumnName(MemberInfo member)
+        {
+            var column = member.GetCustomAttributes<ColumnAttribute>(false).FirstOrDefault();
+            return column?.ColumnName ?? member.Name;
+        }
+
+       public static string GetColumnName(PropertyInfo info)
+        {
+            var column = info.GetCustomAttributes<ColumnAttribute>(false).FirstOrDefault();
+            return column?.ColumnName ?? info.Name;
+        }
+
     }
 }

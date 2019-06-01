@@ -1,19 +1,88 @@
-﻿using System;
+﻿using Leo.Data;
+using Leo.Data.Expressions;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Text;
 
 namespace Leo.Data
 {
-    public delegate int DbTranAction(IDbTransaction db);
-    public delegate IEnumerable<T> DbQueryAction<T>(IDbConnection db);
+
     public interface IUnitOfWork
     {
-        void Execute(DbTranAction dbTranAction);
+        void Execute(Func<IDbCommand, int> func);
 
-       IEnumerable<T> Query<T>(DbQueryAction<T> dbQueryAction);
+        IQuery<T> Query<T>(Func<IDbCommand,IQuery<T>> func);
 
         int SaveChanges();
+    }
+
+    public class UnitOfWork : IUnitOfWork
+    {
+        private readonly IDbProvider dbProvider;
+
+        public UnitOfWork(IDbProvider dbProvider)
+        {
+            this.dbProvider = dbProvider;
+        }
+
+        private int rowCount;
+        private IDbTransaction currentTran;
+        private IDbTransaction CurrentTran
+        {
+            get
+            {
+                if (currentTran == null || currentTran.Connection == null)
+                {
+                    var db = dbProvider.CreateConnection();
+                    db.Open();
+                    currentTran = db.BeginTransaction();
+                    rowCount = 0;
+                }
+                return currentTran;
+            }
+        }
+
+      
+
+        public void Execute(Func<IDbCommand, int> func)
+        {
+            using (var command= dbProvider.CreateCommand())
+            {
+                command.Transaction = CurrentTran;
+                rowCount += func.Invoke(command);
+            }
+           
+        }
+
+        public int SaveChanges()
+        {
+            try
+            {
+                if (currentTran == null)
+                    return 0;
+                currentTran.Commit();
+                return rowCount;
+            }
+            catch (Exception)
+            {
+                currentTran.Rollback();
+                throw;
+            }
+            finally
+            {
+                if (currentTran != null) currentTran = null;
+                rowCount = 0;
+            }
+
+        }
+
+        public IQuery<T> Query<T>(Func<IDbCommand, IQuery<T>> func)
+        {
+            var command = dbProvider.CreateCommand();
+            command.Connection = dbProvider.CreateConnection();
+            return func.Invoke(command);
+        }
     }
 
 }

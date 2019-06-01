@@ -60,6 +60,7 @@
 
   <ItemGroup>
     <Folder Include="Caching\" />
+    <Folder Include="Data1\" />
   </ItemGroup>
 
 </Project>

@@ -67,7 +67,7 @@ namespace Leo.Data.Expressions
             else
             {
                 AddTableName(exp.Type);
-                return Adapter.Table(GetTableName(exp.Type)) + ".*,";
+                return Adapter.Table(TableAttribute.GetTableName(exp.Type)) + ".*,";
             }
         }
 
@@ -115,11 +115,11 @@ namespace Leo.Data.Expressions
                 }
                   if (IsAnonymousType(exp.Member.DeclaringType))
                 {
-                    result += Adapter.Field(GetTableName(AnonymousTypeMapper[exp.Member].DeclaringType), GetColumnName(AnonymousTypeMapper[exp.Member]), member?.Name) + ",";
+                    result += Adapter.Field(TableAttribute.GetTableName(AnonymousTypeMapper[exp.Member].DeclaringType),ColumnAttribute.GetColumnName(AnonymousTypeMapper[exp.Member]), member?.Name) + ",";
                 }
                 else
                 {
-                    result += Adapter.Field(GetTableName(exp.Member.ReflectedType), GetColumnName(exp.Member), member?.Name) + ",";
+                    result += Adapter.Field(TableAttribute.GetTableName(exp.Member.ReflectedType),ColumnAttribute.GetColumnName(exp.Member), member?.Name) + ",";
                 }
             }
             return result;
@@ -419,10 +419,10 @@ namespace Leo.Data.Expressions
     {
         public Dictionary<string, object> Parameters { get; private set; }
 
-        public LambdaResolver()
+        public LambdaResolver(ISqlAdapter adapter)
         {
             Init();
-            this.Adapter = new SqlServerSqlAdapter();
+            Adapter = adapter;
         }
 
         public void Init()
@@ -448,7 +448,7 @@ namespace Leo.Data.Expressions
         {
             Init();
             var modelType = typeof(T);
-            string tableName = GetTableName(modelType);
+            string tableName = TableAttribute.GetTableName(modelType);
             AddTableName(modelType);
             var pros = modelType.GetProperties();
             foreach (var pro in pros)
@@ -456,7 +456,7 @@ namespace Leo.Data.Expressions
                 var att = pro.GetCustomAttribute<ColumnAttribute>();
                 if (att != null && (att.IsIdentity))
                     continue;
-                this.Parameters.Add(GetColumnName(pro), pro.GetValue(entity));
+                this.Parameters.Add(ColumnAttribute.GetColumnName(pro), pro.GetValue(entity));
             }
             var fields = Parameters.Select(p => p.Key).ToArray();
             return Adapter.InsertSql(fields, Source);
@@ -466,7 +466,7 @@ namespace Leo.Data.Expressions
         {
             Init();
             var modelType = typeof(T);
-            string tableName = GetTableName(modelType);
+            string tableName = TableAttribute.GetTableName(modelType);
             AddTableName(modelType);
             var pros = modelType.GetProperties();
             foreach (var pro in pros)
@@ -474,7 +474,7 @@ namespace Leo.Data.Expressions
                 var att = pro.GetCustomAttribute<ColumnAttribute>();
                 if (att != null && (att.IsPrimaryKey || att.IsIdentity || att.NoUpdate))
                     continue;
-                this.Parameters.Add(GetColumnName(pro), pro.GetValue(entity));
+                this.Parameters.Add(ColumnAttribute.GetColumnName(pro), pro.GetValue(entity));
             }
             var fields = Parameters.Select(p => p.Key).ToArray();
 
@@ -506,7 +506,7 @@ namespace Leo.Data.Expressions
         {
             Init();
             var modelType = typeof(T);
-            string tableName = GetTableName(modelType);
+            string tableName = TableAttribute.GetTableName(modelType);
             AddTableName(modelType);
             SqlPart[SqlPartEnum.Where].Add(Resolver(conditions));
             return Adapter.DeleteSql(Source, Conditions);
@@ -514,14 +514,14 @@ namespace Leo.Data.Expressions
 
         public void Join<T, TJoin>(Expression<Func<T, TJoin, bool>> on, JoinEnum joinEnum = JoinEnum.INNER)
         {
-            string table1 = IsAnonymousType(typeof(T)) ? OnJoins.Last().Key : GetTableName<T>();
-            string table2 = GetTableName<TJoin>();
+            string table1 = IsAnonymousType(typeof(T)) ? OnJoins.Last().Key : TableAttribute.GetTableName<T>();
+            string table2 = TableAttribute.GetTableName<TJoin>();
             if (!OnJoins.ContainsKey(table1))
                 OnJoins[table1] = new List<Tuple<string, string>>();
             OnJoins[table1].Add(
                 new Tuple<string, string>(
                     table2
-                , $"{joinEnum.ToString()} JOIN {Adapter.Table(GetTableName<TJoin>())} ON {Resolver((dynamic)on.Body, null)}"));
+                , $"{joinEnum.ToString()} JOIN {Adapter.Table(TableAttribute.GetTableName<TJoin>())} ON {Resolver((dynamic)on.Body, null)}"));
         }
 
         public void Select<T1, TResult>(Expression<Func<T1, TResult>> selector)
@@ -588,28 +588,9 @@ namespace Leo.Data.Expressions
             return !type.IsVisible;
         }
 
-        private static string GetColumnName(MemberInfo member)
-        {
-            var column = member.GetCustomAttributes<ColumnAttribute>(false).FirstOrDefault();
-            return column?.ColumnName ?? member.Name;
-        }
+       
 
-        private static string GetColumnName(PropertyInfo info)
-        {
-            var column = info.GetCustomAttributes<ColumnAttribute>(false).FirstOrDefault();
-            return column?.ColumnName ?? info.Name;
-        }
-
-        private static string GetTableName<T>()
-        {
-            return GetTableName(typeof(T));
-        }
-
-        private static string GetTableName(Type type)
-        {
-            var column = type.GetCustomAttributes<TableAttribute>(false).FirstOrDefault();
-            return column?.TableName ?? type.Name;
-        }
+      
 
         private object GetExpressionValue(Expression exp)
         {
@@ -639,15 +620,19 @@ namespace Leo.Data.Expressions
             throw new ArgumentException($"{exp.NodeType}类型无法被编译成静态值。");
         }
 
-        private void AddTableName(params Type[] types)
+       internal void AddTableName(params Type[] types)
         {
             foreach (var type in types)
             {
-                string table = GetTableName(type);
-                if (!SqlPart[SqlPartEnum.From].Contains(table))
+                if (!IsAnonymousType(type))
                 {
-                    SqlPart[SqlPartEnum.From].Add(table);
+                    string table = TableAttribute.GetTableName(type);
+                    if (!SqlPart[SqlPartEnum.From].Contains(table))
+                    {
+                        SqlPart[SqlPartEnum.From].Add(table);
+                    }
                 }
+              
             }
         }
 
