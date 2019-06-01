@@ -71,7 +71,7 @@ namespace Leo.Data
         /// </summary>
         public bool NoUpdate { get; set; } = false;
 
-        public static bool TryGetColumnAttributes<T>(out Dictionary<string, ColumnAttribute> columnAttributes)
+        public static bool TryGetColumnAttributes<T>(out Dictionary<PropertyInfo, ColumnAttribute> columnAttributes)
         {
             var type = typeof(T);
             return type.TryGetColumnAttributes(out columnAttributes);
@@ -83,7 +83,7 @@ namespace Leo.Data
             return propertyInfo.TryGetColumnAttribute(out columnAttribute);
         }
 
-        public static bool TryGetKeyColumns<T>(out Dictionary<string, ColumnAttribute> keyColumns)
+        public static bool TryGetKeyColumns<T>(out Dictionary<PropertyInfo, ColumnAttribute> keyColumns)
         {
             var type = typeof(T);
             return type.TryGetKeyColumns(out keyColumns);

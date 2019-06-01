@@ -25,7 +25,7 @@ namespace Leo.Data
                 result.TableName = typeof(T).Name;
             }
 
-            if (ColumnAttribute.TryGetColumnAttributes<T>(out Dictionary<string, ColumnAttribute> columnAttributes))
+            if (ColumnAttribute.TryGetColumnAttributes<T>(out Dictionary<PropertyInfo, ColumnAttribute> columnAttributes))
             {
                 //设置表头
                 List<DataColumn> keys = new List<DataColumn>();
@@ -34,16 +34,16 @@ namespace Leo.Data
                     var value = att.Value;
                     DataColumn column = new DataColumn()
                     {
-                        ColumnName = value.ColumnName ?? att.Key,
+                        ColumnName = value.ColumnName ?? att.Key.Name,
                         Caption = value.Description,
                         AllowDBNull = value.Nullable,
                         AutoIncrement = value.IsIdentity,
-                        DataType = infos[att.Key].PropertyType,
+                        DataType = infos[att.Key.Name].PropertyType,
                         Unique = value.Unique,
                     };
                     if (column.DataType == typeof(string) && value.Length>0)
                         column.MaxLength = value.Length;
-                    if (Leo.Util.Converter.TryParse(value.DefaultVal, infos[att.Key].PropertyType, out object obj))
+                    if (Leo.Util.Converter.TryParse(value.DefaultVal, infos[att.Key.Name].PropertyType, out object obj))
                         column.DefaultValue = obj;
                     if (value.IsPrimaryKey)
                         keys.Add(column);
@@ -59,7 +59,7 @@ namespace Leo.Data
                     foreach (var att in columnAttributes)
                     {
                         var value = att.Value;
-                        row[value.ColumnName ?? att.Key] = infos[att.Key].GetValue(entity);
+                        row[value.ColumnName ?? att.Key.Name] = infos[att.Key.Name].GetValue(entity);
 
                     }
                     result.Rows.Add(row);

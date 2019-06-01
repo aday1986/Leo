@@ -480,12 +480,12 @@ namespace Leo.Data.Expressions
 
             if (conditions == null)//条件
             {
-                if (modelType.TryGetKeyColumns(out Dictionary<string, ColumnAttribute> keys))
+                if (modelType.TryGetKeyColumns(out Dictionary<PropertyInfo, ColumnAttribute> keys))
                 {
                     string strConditions = string.Empty;
                     foreach (var key in keys)
                     {
-                        string columnNmae = key.Value.ColumnName ?? key.Key;
+                        string columnNmae = key.Value.ColumnName ?? key.Key.Name;
                         strConditions += $"{Adapter.Field(tableName, columnNmae)}={Adapter.Parameter(columnNmae)} AND ";//条件
                     }
                     SqlPart[SqlPartEnum.Where].Add(strConditions.Remove(strConditions.Length - 5, 5));

@@ -4,7 +4,7 @@ using System.Data;
 using System.Reflection;
 using System.Text;
 
-namespace Leo.Data.Extensions
+namespace Leo.Data
 {
     public static class IDataReaderExtensions
     {

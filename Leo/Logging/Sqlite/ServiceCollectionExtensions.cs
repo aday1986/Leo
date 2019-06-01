@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using Leo.Data;
+using Leo.Data.Sqlite;
 
 namespace Leo.Logging.Sqlite
 {

@@ -58,7 +58,7 @@ namespace Leo.Data.Sqlite
 
         public bool IsFunc(MethodInfo info)
         {
-            return (info.IsStatic && (info.ReflectedType == typeof(AggFunc) || info.ReflectedType==typeof(SqlServerFunc)));
+            return (info.IsStatic && (info.ReflectedType == typeof(AggFunc)));
            
         }
 

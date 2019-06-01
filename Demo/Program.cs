@@ -29,7 +29,7 @@ namespace Demo
             {
                 Random random = new Random();
                 Stopwatch stopwatch = new Stopwatch();
-                Console.WriteLine("1.add;2.query,3.log");
+                Console.WriteLine("1.add;2.query,3.get,4.remove");
                 var key = Console.ReadLine();
                 stopwatch.Start();
                 switch (key)
@@ -49,6 +49,18 @@ namespace Demo
                         var result = repository.Query().ToArray();
                         Console.WriteLine(result.Count());
                         break;
+
+                    case "3":
+                    case "get":
+                        var r = repository.Get(1);
+                        break;
+
+                    case "4":
+                    case "remove":
+                        repository.Remove(t => t.Id >= 10000);
+                        Console.WriteLine(repository.SaveChanges());
+                        break;
+                        
                     default:
                         break;
                 }

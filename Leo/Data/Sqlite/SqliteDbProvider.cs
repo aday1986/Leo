@@ -39,7 +39,7 @@ namespace Leo.Data.Sqlite
 
         public ISqlAdapter CreateSqlAdapter()
         {
-            return new SqlClientSqlAdapter();
+            return new SqliteSqlAdapter();
         }
     }
 }

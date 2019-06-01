@@ -43,7 +43,7 @@ namespace Leo.Tests.NET461
             ToDo((r) =>
             {
                 var list = GetTestEntities();
-                r.AddRange(list);
+                r.Add(list.ToArray());
                 IsTrue(r.SaveChanges() == list.Count);
             });
         }
@@ -56,27 +56,13 @@ namespace Leo.Tests.NET461
             conditions.Add(new Condition() { Key = "Guid", ConditionType = ConditionEnum.NotEqual, Value = "" });
             ToDo(r =>
             {
-                var TestEntitys = r.Query(conditions);
+                var TestEntitys = r.Query().Where(t=>t.Guid!="").ToArray();
                 Console.WriteLine(TestEntitys.Count());
                 IsTrue(TestEntitys.Any());
             });
         }
 
-        [TestMethod]
-        public void QueryPage()
-        {
-            AddRange();
-            List<Condition> conditions = new List<Condition>
-            {
-                new Condition() { Key = "Guid", ConditionType = ConditionEnum.NotEqual, Value = "" }
-            };
-            ToDo(r =>
-            {
-                var TestEntitys = r.QueryPage(conditions, 2, 5);
-                Console.WriteLine(TestEntitys.Count());
-                IsTrue(TestEntitys.Count() == 5);
-            });
-        }
+       
 
         [TestMethod]
         public void Remove()
@@ -97,9 +83,9 @@ namespace Leo.Tests.NET461
             ToDo(r =>
             {
                 var list = GetTestEntities();
-                r.AddRange(list);
+                r.Add(list.ToArray());
                 IsTrue(r.SaveChanges() == list.Count);
-                r.RemoveRange(list);
+                r.Remove(list.ToArray());
                 IsTrue(r.SaveChanges() == list.Count);
             });
         }
@@ -130,14 +116,14 @@ namespace Leo.Tests.NET461
             ToDo(r =>
             {
                 var list = GetTestEntities();
-                r.AddRange(list);
+                r.Add(list.ToArray());
                 IsTrue(r.SaveChanges() == list.Count);
                 Random random = new Random();
                 foreach (var item in list)
                 {
                     item.Num = random.Next();
                 }
-                r.UpdateRange(list);
+                r.Update(list.ToArray());
                 IsTrue(r.SaveChanges() == list.Count);
                 var newEntity = r.Get(list[8].Guid);
                 IsTrue(newEntity.Num == list[8].Num);

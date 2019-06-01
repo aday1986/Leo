@@ -25,21 +25,21 @@ namespace Leo.Data
         /// <summary>
         /// 字段特性缓存。
         /// </summary>
-        private static Dictionary<Type, Dictionary<string, ColumnAttribute>> columnAttributesCaches { get; }
-            = new Dictionary<Type, Dictionary<string, ColumnAttribute>>();
+        private static Dictionary<Type, Dictionary<PropertyInfo, ColumnAttribute>> columnAttributesCaches { get; }
+            = new Dictionary<Type, Dictionary<PropertyInfo, ColumnAttribute>>();
 
-        public static bool TryGetColumnAttributes(this Type type, out Dictionary<string, ColumnAttribute> columnAttributes)
+        public static bool TryGetColumnAttributes(this Type type, out Dictionary<PropertyInfo, ColumnAttribute> columnAttributes)
         {
             if (!columnAttributesCaches.TryGetValue(type, out columnAttributes))
             {
                 var infos = type.GetProperties();
-                var dic = new Dictionary<string, ColumnAttribute>();
+                var dic = new Dictionary<PropertyInfo, ColumnAttribute>();
                 foreach (var info in infos)
                 {
                     var atts = info.GetCustomAttributes(typeof(ColumnAttribute), false);
                     if (atts.Any())
                     {
-                        dic.Add(info.Name, (ColumnAttribute)atts[0]);
+                        dic.Add(info, (ColumnAttribute)atts[0]);
                     }
                 }
                 columnAttributes = dic;
@@ -56,10 +56,10 @@ namespace Leo.Data
             return atts.Any();
         }
 
-        public static bool TryGetKeyColumns(this Type type, out Dictionary<string, ColumnAttribute> keyColumns)
+        public static bool TryGetKeyColumns(this Type type, out Dictionary<PropertyInfo, ColumnAttribute> keyColumns)
         {
-            keyColumns = new Dictionary<string, ColumnAttribute>();
-            if (TryGetColumnAttributes(type, out Dictionary<string, ColumnAttribute> columns))
+            keyColumns = new Dictionary<PropertyInfo, ColumnAttribute>();
+            if (TryGetColumnAttributes(type, out Dictionary<PropertyInfo, ColumnAttribute> columns))
             {
                 var keys = columns.Where(key => key.Value.IsPrimaryKey);
                 if (keys.Any())
