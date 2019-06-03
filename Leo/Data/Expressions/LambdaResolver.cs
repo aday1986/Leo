@@ -12,9 +12,45 @@ using System.Text;
 
 namespace Leo.Data.Expressions
 {
+    public class SourceInfo
+    {
+        public Type Type { get; set; }
+
+        public string SourceText { get; set; }
+
+        public string Alias { get; set; }
+
+        public bool IsQuery { get; set; }
+    }
+
+    public class JoinInfo
+    {
+      public  SourceInfo Left { get; set; }
+       public SourceInfo Right { get; set; }
+        public string OnText { get; set; }
+        public JoinEnum JoinEnum { get; set; }
+
+    }
+
+    public class ColumnInfo
+    {
+        public SourceInfo Source { get; set; }
+
+        public string ColumnText { get; set; }
+
+        public string Alias { get; set; }
+    }
     //Core
     public partial class LambdaResolver
     {
+
+        private List<SourceInfo> sourceInfos { get; set; }
+
+        private List<ColumnInfo> ColumnInfos { get; set; }
+
+        private Dictionary<SourceInfo, JoinInfo> JoinInfos { get; set; }
+
+
         /// <summary>
         /// 解析，并添加指定<see cref="SqlPartEnum"/>的表达式，外部调用递归函数集的入口。
         /// </summary>
