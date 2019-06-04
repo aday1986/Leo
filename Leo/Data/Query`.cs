@@ -34,26 +34,44 @@ namespace Leo.Data
         }
     }
 
-    public class Query<T> : IQuery<T>
+    public class Query
     {
-        private readonly LambdaResolver resolver;
-        private readonly QueryContext context;
-
+      internal readonly LambdaResolver resolver;
+       internal readonly QueryContext context;
         internal Query(QueryContext context)
         {
             this.resolver = context.Resolver;
             this.context = context;
-            resolver.AddTableName(typeof(T));
         }
+        public string ToSql()
+        {
+            return resolver.QueryString();
+        }
+    }
+
+    public class Query<T> :Query
+    {
 
 
-        public IQuery<T, TJoin> Join<TJoin>(Expression<Func<T, TJoin, bool>> on)
+
+        internal Query(QueryContext context):base(context)
+        { }
+       
+
+
+        public Query<T, TJoin> Join<TJoin>(Expression<Func<T, TJoin, bool>> on)
         {
             resolver.Join(on);
             return new Query<T, TJoin>(context);
         }
 
-        public IQuery<TResult> Select<TResult>(Expression<Func<T, TResult>> selector)
+        public Query<T, TJoin> Join<TJoin>(Query<TJoin> query, Expression<Func<T, TJoin, bool>> on)
+        {
+            resolver.Join(query.resolver, query, on);
+            return new Query<T, TJoin>(context);
+        }
+
+        public Query<TResult> Select<TResult>(Expression<Func<T, TResult>> selector)
         {
             //resolver.SignAni(typeof(TResult), typeof(T));
             resolver.Select(selector);
@@ -70,14 +88,21 @@ namespace Leo.Data
             return results;
         }
 
-        public IQuery<T> Where(Expression<Func<T, bool>> conditions)
+      
+
+        public Query<T> Where(Expression<Func<T, bool>> conditions)
         {
             resolver.Where(conditions);
             return this;
         }
+
+        public override string ToString()
+        {
+            return resolver.ToString();
+        }
     }
 
-    public class Query<T1, T2> : IQuery<T1, T2>
+    public class Query<T1, T2> 
     {
         private readonly LambdaResolver resolver;
         private readonly QueryContext context;
@@ -90,20 +115,20 @@ namespace Leo.Data
 
 
 
-        public IQuery<TResult> Select<TResult>(Expression<Func<T1, T2, TResult>> selector)
+        public Query<TResult> Select<TResult>(Expression<Func<T1, T2, TResult>> selector)
         {
             //resolver.SignAni(typeof(TResult), typeof(T1), typeof(T2));
             resolver.Select(selector);
             return new Query<TResult>(context);
         }
 
-        public IQuery<T1, T2> Where(Expression<Func<T1, T2, bool>> conditions)
+        public Query<T1, T2> Where(Expression<Func<T1, T2, bool>> conditions)
         {
             resolver.Where(conditions);
             return this;
         }
 
-        public IQuery<T1, T2, TJoin> Join<TJoin>(Expression<Func<T1, TJoin, bool>> on)
+        public Query<T1, T2, TJoin> Join<TJoin>(Expression<Func<T1, TJoin, bool>> on)
         {
             resolver.Join(on);
             return new Query<T1, T2, TJoin>(context);
@@ -120,7 +145,7 @@ namespace Leo.Data
         }
     }
 
-    public class Query<T1, T2, T3> : IQuery<T1, T2, T3>
+    public class Query<T1, T2, T3> 
     {
 
         private readonly LambdaResolver resolver;
@@ -132,7 +157,7 @@ namespace Leo.Data
             this.context = context;
         }
 
-        public IQuery<TResult> Select<TResult>(Expression<Func<T1, T2, T3, TResult>> selector)
+        public Query<TResult> Select<TResult>(Expression<Func<T1, T2, T3, TResult>> selector)
         {
             //resolver.SignAni(typeof(TResult), typeof(T1), typeof(T2), typeof(T3));
             resolver.Select(selector);
@@ -149,7 +174,7 @@ namespace Leo.Data
             return results;
         }
 
-        public IQuery<T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> conditions)
+        public Query<T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> conditions)
         {
             resolver.Where(conditions);
             return this;

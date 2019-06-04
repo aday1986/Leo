@@ -12,43 +12,169 @@ using System.Text;
 
 namespace Leo.Data.Expressions
 {
-    public class SourceInfo
-    {
-        public Type Type { get; set; }
-
-        public string SourceText { get; set; }
-
-        public string Alias { get; set; }
-
-        public bool IsQuery { get; set; }
-    }
-
-    public class JoinInfo
-    {
-      public  SourceInfo Left { get; set; }
-       public SourceInfo Right { get; set; }
-        public string OnText { get; set; }
-        public JoinEnum JoinEnum { get; set; }
-
-    }
-
-    public class ColumnInfo
-    {
-        public SourceInfo Source { get; set; }
-
-        public string ColumnText { get; set; }
-
-        public string Alias { get; set; }
-    }
     //Core
     public partial class LambdaResolver
     {
+        private static Dictionary<ExpressionType, string> operationDictionary
+         = new Dictionary<ExpressionType, string>(){
+                { ExpressionType.Equal, "="},
+                { ExpressionType.NotEqual, "<>"},
+                { ExpressionType.GreaterThan, ">"},
+                { ExpressionType.LessThan, "<"},
+                { ExpressionType.GreaterThanOrEqual, ">="},
+                { ExpressionType.LessThanOrEqual, "<="},
+                { ExpressionType.And," AND "},
+                { ExpressionType.AndAlso," AND "},
+                { ExpressionType.Or," OR "},
+                { ExpressionType.OrElse," OR "},
+                 { ExpressionType.Not,"NOT "},
+                  { ExpressionType.Negate,"-"}
+         };
 
-        private List<SourceInfo> sourceInfos { get; set; }
+        private const string PARAM = "p";
 
-        private List<ColumnInfo> ColumnInfos { get; set; }
+        private const string SOURCE = "t";
 
-        private Dictionary<SourceInfo, JoinInfo> JoinInfos { get; set; }
+        private int CurrentParamIndex { get; set; }
+
+        private int SourceIndex { get; set; }
+
+        private ISqlAdapter Adapter { get; set; }
+
+        private Dictionary<SqlPartEnum, List<string>> SqlPart { get; set; }
+
+        internal Dictionary<object, SourceInfo> SourceInfos { get; set; }
+
+        internal Dictionary<MemberInfo, ColumnInfo> ColumnInfos { get; set; }
+
+        internal Dictionary<SourceInfo, List<JoinInfo>> JoinInfos { get; set; }
+
+        /// <summary>
+        /// 匿名类属性映射。
+        /// </summary>
+        private Dictionary<MemberInfo, MemberInfo> AnonymousMemberMapper { get; set; }
+
+        /// <summary>
+        /// 匿名类映射。
+        /// </summary>
+        private Dictionary<Type, List<Type>> AnonymousTypeMapper { get; set; }
+
+        private void Init()
+        {
+            Parameters = new Dictionary<string, object>();
+            this.SqlPart = new Dictionary<SqlPartEnum, List<string>>();
+            this.SourceInfos = new Dictionary<object, SourceInfo>();
+            this.ColumnInfos = new Dictionary<MemberInfo, ColumnInfo>();
+            this.JoinInfos = new Dictionary<SourceInfo, List<JoinInfo>>();
+            this.AnonymousMemberMapper = new Dictionary<MemberInfo, MemberInfo>();
+            this.AnonymousTypeMapper = new Dictionary<Type, List<Type>>();
+            this.CurrentParamIndex = 0;
+            this.SourceIndex = 0;
+            var e = Enum.GetValues(typeof(SqlPartEnum));
+            foreach (SqlPartEnum item in e)
+            {
+                SqlPart.Add(item, new List<string>());
+            }
+        }
+
+        private string Source
+        {
+            get
+            {
+                string result = string.Empty;
+                foreach (var sourceInfo in SourceInfos.Where(s => !s.Value.IsQuery))
+                {
+                    result += $"{Adapter.Source(sourceInfo.Value)}";
+                    if (JoinInfos.TryGetValue(sourceInfo.Value, out List<JoinInfo> values))
+                    {
+                        foreach (var value in values)
+                        {
+                            string right = Adapter.Source(value.Right);
+                            result += $" {value.JoinEnum.ToString().ToUpper()} JOIN {right} ON {value.OnText}";
+                        }
+                    }
+                    result += ",";
+                }
+
+                return result.TrimEnd(',');
+            }
+        }
+
+        private string Selection
+        {
+            get
+            {
+                if (SqlPart[SqlPartEnum.Select].Any())
+                    return string.Join(",", SqlPart[SqlPartEnum.Select]);
+                else
+                    return "*";
+            }
+        }
+
+        private string Conditions
+        {
+            get
+            {
+                string result = string.Empty;
+                if (SqlPart[SqlPartEnum.Where].Any())
+                {
+                    if (SqlPart[SqlPartEnum.Where].Count == 1)//单条件集合。
+                    {
+                        result = $"WHERE {SqlPart[SqlPartEnum.Where].FirstOrDefault()}";
+                    }
+                    else//多条件集合。
+                    {
+                        result += "WHERE ";
+                        foreach (var item in SqlPart[SqlPartEnum.Where])
+                        {
+                            if (item.Count(c => c == ' ') >= 3)//判断是否加括号，不严谨。
+                            {
+                                result += $"({item}) AND ";
+                            }
+                            else
+                            {
+                                result += $"{item} AND ";
+                            }
+                        }
+                        result = result.Remove(result.Length - 5, 5);
+                    }
+                }
+                return result;
+            }
+        }
+
+        private string OrderText
+        {
+            get
+            {
+                if (SqlPart[SqlPartEnum.Order].Any())
+                    return "ORDER BY " + string.Join(",", SqlPart[SqlPartEnum.Order]);
+                else
+                    return string.Empty;
+            }
+        }
+
+        private string Grouping
+        {
+            get
+            {
+                if (SqlPart[SqlPartEnum.Group].Any())
+                    return "GROUP BY " + string.Join(",", SqlPart[SqlPartEnum.Group]);
+                else
+                    return string.Empty;
+            }
+        }
+
+        private string HavingText
+        {
+            get
+            {
+                if (SqlPart[SqlPartEnum.Having].Any())
+                    return "HAVING " + string.Join(" ", SqlPart[SqlPartEnum.Having]);
+                else
+                    return string.Empty;
+            }
+        }
 
 
         /// <summary>
@@ -96,14 +222,15 @@ namespace Leo.Data.Expressions
         /// <returns></returns>
         private string Resolver(ParameterExpression exp, MemberInfo member)
         {
+
             if (IsAnonymousType(exp.Type))
             {
                 return "*";
             }
             else
             {
-                AddTableName(exp.Type);
-                return Adapter.Table(TableAttribute.GetTableName(exp.Type)) + ".*,";
+                var source = AddSource(exp.Type);
+                return Adapter.GetSourceName(source) + ".*,";
             }
         }
 
@@ -130,7 +257,7 @@ namespace Leo.Data.Expressions
             if (exp != null && (exp.Expression == null || exp.Expression.NodeType != ExpressionType.Parameter))//静态值
             {
                 object value = GetExpressionValue(exp);
-                if (value is Array)//数组
+                if (value is Array)//数组解析为p1,p2,p3,
                 {
                     var arr = value as Array;
                     foreach (var item in arr)
@@ -145,18 +272,21 @@ namespace Leo.Data.Expressions
             }
             else
             {
-                if (member!=null && IsAnonymousType(member.DeclaringType))//添加匿名类映射。
+                if (member != null && IsAnonymousType(member.DeclaringType))
                 {
-                    AnonymousTypeMapper.Add(member,exp.Member);
+                    AnonymousMemberMapper[member] = exp.Member;
                 }
-                  if (IsAnonymousType(exp.Member.DeclaringType))
+                var realMember = GetRealMemberInfo(exp.Member);//递归获取。
+                if (!ColumnInfos.ContainsKey(realMember))
                 {
-                    result += Adapter.Field(TableAttribute.GetTableName(AnonymousTypeMapper[exp.Member].DeclaringType),ColumnAttribute.GetColumnName(AnonymousTypeMapper[exp.Member]), member?.Name) + ",";
+                    ColumnInfos[realMember] = new ColumnInfo()
+                    {
+                        Alias = member?.Name,
+                        Source = SourceInfos[realMember.ReflectedType],
+                        ColumnText = ColumnAttribute.GetColumnName(realMember)
+                    };
                 }
-                else
-                {
-                    result += Adapter.Field(TableAttribute.GetTableName(exp.Member.ReflectedType),ColumnAttribute.GetColumnName(exp.Member), member?.Name) + ",";
-                }
+                result += Adapter.Field(ColumnInfos[realMember], !(member == null)) + ",";
             }
             return result;
         }
@@ -174,6 +304,7 @@ namespace Leo.Data.Expressions
             {
                 result += Resolver(exp.Arguments[i], exp.Members[i]);
             }
+
             return result;
         }
 
@@ -311,167 +442,15 @@ namespace Leo.Data.Expressions
         }
     }
 
-    //Private
-    public partial class LambdaResolver
-    {
-        private static Dictionary<ExpressionType, string> operationDictionary
-          = new Dictionary<ExpressionType, string>(){
-                { ExpressionType.Equal, "="},
-                { ExpressionType.NotEqual, "!="},
-                { ExpressionType.GreaterThan, ">"},
-                { ExpressionType.LessThan, "<"},
-                { ExpressionType.GreaterThanOrEqual, ">="},
-                { ExpressionType.LessThanOrEqual, "<="},
-                { ExpressionType.And," AND "},
-                { ExpressionType.AndAlso," AND "},
-                { ExpressionType.Or," OR "},
-                { ExpressionType.OrElse," OR "},
-                 { ExpressionType.Not,"NOT "},
-                  { ExpressionType.Negate,"-"}
-          };
-
-        private const string PARAM = "p";
-
-        private int CurrentParamIndex { get; set; }
-
-        private ISqlAdapter Adapter { get; set; }
-
-        private Dictionary<SqlPartEnum, List<string>> SqlPart { get; set; }
-
-        /// <summary>
-        /// 匿名类属性映射。
-        /// </summary>
-        private Dictionary<MemberInfo, MemberInfo> AnonymousTypeMapper { get; } = new Dictionary<MemberInfo, MemberInfo>();
-
-        private Dictionary<string, List<Tuple<string, string>>> OnJoins { get; set; }
-
-        private string Source
-        {
-            get
-            {
-                string result = string.Empty;
-                foreach (var onJoin in OnJoins)
-                {
-                    SqlPart[SqlPartEnum.From].Remove(onJoin.Key);
-                    result += $"{Adapter.Table(onJoin.Key)} ";
-                    foreach (var item in onJoin.Value)
-                    {
-                        SqlPart[SqlPartEnum.From].Remove(item.Item1);
-                        result += $"{item.Item2} ";
-                    }
-                    result += ",";
-                }
-                foreach (var table in SqlPart[SqlPartEnum.From])
-                {
-                    result += $"{Adapter.Table(table)},";
-                }
-                if (string.IsNullOrEmpty(result))
-                {
-                    throw new ArgumentNullException(nameof(Source));
-                }
-                return result.TrimEnd(',');
-            }
-        }
-
-        private string Selection
-        {
-            get
-            {
-                if (SqlPart[SqlPartEnum.Select].Any())
-                    return string.Join(",", SqlPart[SqlPartEnum.Select]);
-                else
-                    return "*";
-            }
-        }
-
-        private string Conditions
-        {
-            get
-            {
-                string result = string.Empty;
-                if (SqlPart[SqlPartEnum.Where].Any())
-                {
-                    if (SqlPart[SqlPartEnum.Where].Count == 1)//单条件集合。
-                    {
-                        result = $"WHERE {SqlPart[SqlPartEnum.Where].FirstOrDefault()}";
-                    }
-                    else//多条件集合。
-                    {
-                        result += "WHERE ";
-                        foreach (var item in SqlPart[SqlPartEnum.Where])
-                        {
-                            if (item.Count(c => c == ' ') >= 3)//判断是否加括号，不严谨。
-                            {
-                                result += $"({item}) AND ";
-                            }
-                            else
-                            {
-                                result += $"{item} AND ";
-                            }
-                        }
-                        result = result.Remove(result.Length - 5, 5);
-                    }
-                }
-                return result;
-            }
-        }
-
-        private string OrderText
-        {
-            get
-            {
-                if (SqlPart[SqlPartEnum.Order].Any())
-                    return "ORDER BY " + string.Join(",", SqlPart[SqlPartEnum.Order]);
-                else
-                    return string.Empty;
-            }
-        }
-
-        private string Grouping
-        {
-            get
-            {
-                if (SqlPart[SqlPartEnum.Group].Any())
-                    return "GROUP BY " + string.Join(",", SqlPart[SqlPartEnum.Group]);
-                else
-                    return string.Empty;
-            }
-        }
-
-        private string HavingText
-        {
-            get
-            {
-                if (SqlPart[SqlPartEnum.Having].Any())
-                    return "HAVING " + string.Join(" ", SqlPart[SqlPartEnum.Having]);
-                else
-                    return string.Empty;
-            }
-        }
-    }
-
     //Public
     public partial class LambdaResolver
     {
         public Dictionary<string, object> Parameters { get; private set; }
 
-        public LambdaResolver(ISqlAdapter adapter)
+        public LambdaResolver(IDbProvider dbProvider)
         {
             Init();
-            Adapter = adapter;
-        }
-
-        public void Init()
-        {
-            Parameters = new Dictionary<string, object>();
-            this.SqlPart = new Dictionary<SqlPartEnum, List<string>>();
-            this.OnJoins = new Dictionary<string, List<Tuple<string, string>>>();
-            this.CurrentParamIndex = 0;
-            var e = Enum.GetValues(typeof(SqlPartEnum));
-            foreach (SqlPartEnum item in e)
-            {
-                SqlPart.Add(item, new List<string>());
-            }
+            Adapter = dbProvider.CreateSqlAdapter();
         }
 
         public string QueryString()
@@ -485,7 +464,7 @@ namespace Leo.Data.Expressions
             Init();
             var modelType = typeof(T);
             string tableName = TableAttribute.GetTableName(modelType);
-            AddTableName(modelType);
+            AddSource(modelType);
             var pros = modelType.GetProperties();
             foreach (var pro in pros)
             {
@@ -498,76 +477,113 @@ namespace Leo.Data.Expressions
             return Adapter.InsertSql(fields, Source);
         }
 
-        public string UpdateSql<T>(T entity, Expression<Func<T, bool>> conditions = null)
-        {
-            Init();
-            var modelType = typeof(T);
-            string tableName = TableAttribute.GetTableName(modelType);
-            AddTableName(modelType);
-            var pros = modelType.GetProperties();
-            foreach (var pro in pros)
-            {
-                var att = pro.GetCustomAttribute<ColumnAttribute>();
-                if (att != null && (att.IsPrimaryKey || att.IsIdentity || att.NoUpdate))
-                    continue;
-                this.Parameters.Add(ColumnAttribute.GetColumnName(pro), pro.GetValue(entity));
-            }
-            var fields = Parameters.Select(p => p.Key).ToArray();
-
-            if (conditions == null)//条件
-            {
-                if (modelType.TryGetKeyColumns(out Dictionary<PropertyInfo, ColumnAttribute> keys))
-                {
-                    string strConditions = string.Empty;
-                    foreach (var key in keys)
-                    {
-                        string columnNmae = key.Value.ColumnName ?? key.Key.Name;
-                        strConditions += $"{Adapter.Field(tableName, columnNmae)}={Adapter.Parameter(columnNmae)} AND ";//条件
-                    }
-                    SqlPart[SqlPartEnum.Where].Add(strConditions.Remove(strConditions.Length - 5, 5));
-                }
-                else
-                {
-                    throw new Exception($"实体{modelType.Name}没有可被匹配的主键，无法更新。");
-                }
-            }
-            else
-            {
-                SqlPart[SqlPartEnum.Where].Add(Resolver(conditions));
-            }
-            return Adapter.UpdateSql(fields, Source, Conditions);
-        }
-
         public string DeleteSql<T>(Expression<Func<T, bool>> conditions)
         {
             Init();
             var modelType = typeof(T);
             string tableName = TableAttribute.GetTableName(modelType);
-            AddTableName(modelType);
+            AddSource(modelType);
             SqlPart[SqlPartEnum.Where].Add(Resolver(conditions));
             return Adapter.DeleteSql(Source, Conditions);
         }
 
         public void Join<T, TJoin>(Expression<Func<T, TJoin, bool>> on, JoinEnum joinEnum = JoinEnum.INNER)
         {
-            string table1 = IsAnonymousType(typeof(T)) ? OnJoins.Last().Key : TableAttribute.GetTableName<T>();
-            string table2 = TableAttribute.GetTableName<TJoin>();
-            if (!OnJoins.ContainsKey(table1))
-                OnJoins[table1] = new List<Tuple<string, string>>();
-            OnJoins[table1].Add(
-                new Tuple<string, string>(
-                    table2
-                , $"{joinEnum.ToString()} JOIN {Adapter.Table(TableAttribute.GetTableName<TJoin>())} ON {Resolver((dynamic)on.Body, null)}"));
+            string onText = Resolver(on, null);
+            var right = SourceInfos[typeof(TJoin)];
+            SourceInfo left = null;
+            if (IsAnonymousType(typeof(T)))
+                left = SourceInfos[AnonymousTypeMapper[typeof(T)].FirstOrDefault()];
+            else
+                left = SourceInfos[typeof(T)];
+            SourceInfos.Remove(right);
+            JoinInfo joinInfo = new JoinInfo
+            {
+                JoinEnum = joinEnum,
+                OnText = onText,
+                Left = left,
+                Right = right
+            };
+            if (!JoinInfos.ContainsKey(joinInfo.Left))
+            {
+                JoinInfos[joinInfo.Left] = new List<JoinInfo>();
+            }
+            JoinInfos[joinInfo.Left].Add(joinInfo);
+        }
+
+        public void Join<T, TJoin>(LambdaResolver resolver, Query<TJoin> query, Expression<Func<T, TJoin, bool>> on, JoinEnum joinEnum = JoinEnum.INNER)
+        {
+            if (resolver == this)
+            {
+                throw new Exception("不能是自己的子查询。");
+            }
+            var right = AddSource(query);
+            foreach (var item in resolver.AnonymousMemberMapper)
+            {
+                this.AnonymousMemberMapper[item.Key] = item.Value;
+            }
+            foreach (var item in resolver.AnonymousTypeMapper)
+            {
+                this.AnonymousTypeMapper[item.Key] = item.Value;
+            }
+
+            //foreach (var item in resolver.SourceInfos)
+            //{
+            //    this.SourceInfos[item.Key] = item.Value;
+            //}
+            foreach (var item in resolver.ColumnInfos)
+            {
+                item.Value.Source = right;
+                this.ColumnInfos[item.Key] = item.Value;
+            }
+            string onText = Resolver(on, null);
+
+            SourceInfo left = null;
+            if (IsAnonymousType(typeof(T)))
+                left = SourceInfos[AnonymousTypeMapper[typeof(T)].FirstOrDefault()];
+            else
+                left = SourceInfos[typeof(T)];
+            SourceInfos.Remove(right);
+            JoinInfo joinInfo = new JoinInfo
+            {
+                JoinEnum = joinEnum,
+                OnText = onText,
+                Left = left,
+                Right = right
+            };
+            if (!JoinInfos.ContainsKey(joinInfo.Left))
+            {
+                JoinInfos[joinInfo.Left] = new List<JoinInfo>();
+            }
+            JoinInfos[joinInfo.Left].Add(joinInfo);
         }
 
         public void Select<T1, TResult>(Expression<Func<T1, TResult>> selector)
-         => Resolver(selector, SqlPartEnum.Select);
+        {
+            var typeResult = typeof(TResult);
+            if (!AnonymousTypeMapper.ContainsKey(typeResult))
+                AnonymousTypeMapper[typeResult] = new List<Type>();
+            AnonymousTypeMapper[typeResult].AddRange(new Type[] { typeof(T1) });
+            Resolver(selector, SqlPartEnum.Select);
+        }
 
         public void Select<T1, T2, TResult>(Expression<Func<T1, T2, TResult>> selector)
-         => Resolver(selector, SqlPartEnum.Select);
+        {
+            var typeResult = typeof(TResult);
+            if (!AnonymousTypeMapper.ContainsKey(typeResult))
+                AnonymousTypeMapper[typeResult] = new List<Type>();
+            AnonymousTypeMapper[typeResult].AddRange(new Type[] { typeof(T1), typeof(T2) });
+            Resolver(selector, SqlPartEnum.Select);
+        }
 
         public void Select<T1, T2, T3, TResult>(Expression<Func<T1, T2, T3, TResult>> selector)
-            => Resolver(selector, SqlPartEnum.Select);
+        {
+            var typeResult = typeof(TResult);
+            if (!AnonymousTypeMapper.ContainsKey(typeResult))
+                AnonymousTypeMapper[typeResult] = new List<Type>();
+            AnonymousTypeMapper[typeResult].AddRange(new Type[] { typeof(T1), typeof(T2), typeof(T3) });
+            Resolver(selector, SqlPartEnum.Select);
+        }
 
         public void Order<T1>(Expression<Func<T1, object>> selector)
             => Resolver(selector, SqlPartEnum.Order);
@@ -615,6 +631,24 @@ namespace Leo.Data.Expressions
     public partial class LambdaResolver
     {
         /// <summary>
+        /// 递归获取源类型信息。
+        /// </summary>
+        /// <param name="member"></param>
+        /// <returns></returns>
+        private MemberInfo GetRealMemberInfo(MemberInfo member)
+        {
+            if (IsAnonymousType(member.DeclaringType))
+            {
+                member = AnonymousMemberMapper[member];
+                return GetRealMemberInfo(member);
+            }
+            else
+            {
+                return member;
+            }
+        }
+
+        /// <summary>
         /// 判断是否匿名类。
         /// </summary>
         /// <param name="type"></param>
@@ -624,10 +658,11 @@ namespace Leo.Data.Expressions
             return !type.IsVisible;
         }
 
-       
-
-      
-
+        /// <summary>
+        /// 解析<see cref="Expression"/>为常数值。
+        /// </summary>
+        /// <param name="exp"></param>
+        /// <returns></returns>
         private object GetExpressionValue(Expression exp)
         {
             if (exp == null)
@@ -651,25 +686,45 @@ namespace Leo.Data.Expressions
                         case MemberTypes.Field:
                             return (memberExp.Member as FieldInfo).GetValue(parentObj);
                     }
-                    break;      
+                    break;
             }
             throw new ArgumentException($"{exp.NodeType}类型无法被编译成静态值。");
         }
 
-       internal void AddTableName(params Type[] types)
+        /// <summary>
+        /// 添加且返回结果，已存在对象则只返回。可以是类型，或者<see cref="Query"/>子查询。
+        /// 如果是子查询，会将里面的Params添加到当前查询。
+        /// </summary>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        internal SourceInfo AddSource(object source)
         {
-            foreach (var type in types)
+            if (SourceInfos.ContainsKey(source))
+                return SourceInfos[source];
+            SourceInfo sourceInfo = new SourceInfo();
+            sourceInfo.Alias = $"{SOURCE}{SourceIndex++}";
+            if (source is Type)
             {
-                if (!IsAnonymousType(type))
-                {
-                    string table = TableAttribute.GetTableName(type);
-                    if (!SqlPart[SqlPartEnum.From].Contains(table))
-                    {
-                        SqlPart[SqlPartEnum.From].Add(table);
-                    }
-                }
-              
+                var type = source as Type;
+                sourceInfo.IsQuery = false;
+                sourceInfo.SourceText = TableAttribute.GetTableName(type);
+                sourceInfo.SourceType = type;
             }
+            else if (source is Query)
+            {
+                var query = source as Query;
+                sourceInfo.IsQuery = true;
+                sourceInfo.SourceText = query.ToSql();
+                sourceInfo.SourceType = typeof(Query);
+                sourceInfo.Parameters = query.resolver.Parameters;
+                foreach (var item in sourceInfo.Parameters)
+                {
+                    string newKey = AddParameter(item.Value);
+                    sourceInfo.SourceText = sourceInfo.SourceText.Replace(item.Key, newKey);
+                }
+            }
+            SourceInfos[source] = sourceInfo;
+            return sourceInfo;
         }
 
         /// <summary>
@@ -684,9 +739,9 @@ namespace Leo.Data.Expressions
 
         private string AddParameter(object value, string alias = null)
         {
-            ++CurrentParamIndex;
-            string id = PARAM + CurrentParamIndex.ToString(CultureInfo.InvariantCulture);
-            this.Parameters.Add(id, value);
+
+            string id = $"{ PARAM}{CurrentParamIndex++}";
+            this.Parameters.Add(Adapter.Parameter(id), value);
             return Adapter.Parameter(id, alias);
         }
     }

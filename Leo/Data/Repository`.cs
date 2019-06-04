@@ -64,7 +64,7 @@ namespace Leo.Data
 
        
 
-        public IQuery<T> Query()
+        public Query<T> Query()
         {
             return unit.Query<T>(c=>new Query<T>(new QueryContext(resolver,c)));
         }

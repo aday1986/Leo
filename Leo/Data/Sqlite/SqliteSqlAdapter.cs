@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace Leo.Data.SqlClient
+namespace Leo.Data.Sqlite
 {
-    public class SqlClientSqlAdapter : ISqlAdapter
+    public class SqliteSqlAdapter : ISqlAdapter
     {
        
     }

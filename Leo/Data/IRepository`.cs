@@ -28,7 +28,7 @@ namespace Leo.Data
 
         void Update(T model, Expression<Func<T, bool>> conditions);
 
-        IQuery<T> Query();
+        Query<T> Query();
 
         T Get(params object[] keyvalues);
 

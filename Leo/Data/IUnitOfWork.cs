@@ -12,7 +12,7 @@ namespace Leo.Data
     {
         void Execute(Func<IDbCommand, int> func);
 
-        IQuery<T> Query<T>(Func<IDbCommand,IQuery<T>> func);
+        Query<T> Query<T>(Func<IDbCommand,Query<T>> func);
 
         int SaveChanges();
     }
@@ -77,7 +77,7 @@ namespace Leo.Data
 
         }
 
-        public IQuery<T> Query<T>(Func<IDbCommand, IQuery<T>> func)
+        public Query<T> Query<T>(Func<IDbCommand, Query<T>> func)
         {
             var command = dbProvider.CreateCommand();
             command.Connection = dbProvider.CreateConnection();
