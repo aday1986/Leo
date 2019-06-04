@@ -23,7 +23,7 @@ namespace Demo
          static void Main(string[] args)
         {
             var services = ConfigureServices();
-           var repository = services.GetService<IRepository<SDPHDMX>>();
+           var repository = services.GetService<IRepository<Students>>();
                
             while (true)
             {
@@ -34,40 +34,33 @@ namespace Demo
                 stopwatch.Start();
                 switch (key)
                 {
-                    //case "add":
-                    //case "1":
-                    //    List<Students> students = new List<Students>();
-                    //    for (int i = 0; i < 10000; i++)
-                    //    {
-                    //        students.Add(new Students() { StudentName = Guid.NewGuid().ToString(), CreateDate=DateTime.Now, StudentEnum=(StudentEnum)random.Next(0,2) });
-                    //    }
-                    //    repository.Add(students.ToArray());
-                    //  Console.WriteLine(  repository.SaveChanges());
-                    //    break;
+                    case "add":
+                    case "1":
+                        List<Students> students = new List<Students>();
+                        for (int i = 0; i < 10000; i++)
+                        {
+                            students.Add(new Students() { StudentName = Guid.NewGuid().ToString(), CreateDate = DateTime.Now, StudentEnum = (StudentEnum)random.Next(0, 2) });
+                        }
+                        repository.Add(students.ToArray());
+                        Console.WriteLine(repository.SaveChanges());
+                        break;
                     case "2":
                     case "query":
-                        var repository1 = services.GetService<IRepository<SDPHD>>();
-                        var query = repository1.Query().Select(t => new { t.DJBH,t.QDDM}).Where(t=>t.QDDM=="015");
-
-                        var result = repository.Query().Select(t => new {t.DJBH, t.SPDM,S="999" })
-                            .Join(query, (t1, t2) => t1.DJBH == t2.DJBH).Select((t1, t2) => new { t1.SPDM, t2.DJBH })
-                            .Where(t => t.SPDM != "" && t.DJBH!="");
-                            ;
-                         
-                       Console.WriteLine(result.ToSql());
+                        var result = repository.Query().Where(t => t.Id >= 50 && t.Id <= 100).ToArray();
+                       Console.WriteLine(result.Count());
                         break;
 
-                    //case "3":
-                    //case "get":
-                    //    var r = repository.Get(1);
-                    //    break;
+                    case "3":
+                    case "get":
+                        var r = repository.Get(1);
+                        break;
 
-                    //case "4":
-                    //case "remove":
-                    //    repository.Remove(t => t.Id >= 10000);
-                    //    Console.WriteLine(repository.SaveChanges());
-                    //    break;
-                        
+                    case "4":
+                    case "remove":
+                        repository.Remove(t => t.Id >= 10000);
+                        Console.WriteLine(repository.SaveChanges());
+                        break;
+
                     default:
                         break;
                 }

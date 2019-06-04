@@ -5,6 +5,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Linq;
 
 namespace Leo.Data
 {
@@ -43,58 +44,6 @@ namespace Leo.Data
             this.resolver = context.Resolver;
             this.context = context;
         }
-        public string ToSql()
-        {
-            return resolver.QueryString();
-        }
-    }
-
-    public class Query<T> :Query
-    {
-
-
-
-        internal Query(QueryContext context):base(context)
-        { }
-       
-
-
-        public Query<T, TJoin> Join<TJoin>(Expression<Func<T, TJoin, bool>> on)
-        {
-            resolver.Join(on);
-            return new Query<T, TJoin>(context);
-        }
-
-        public Query<T, TJoin> Join<TJoin>(Query<TJoin> query, Expression<Func<T, TJoin, bool>> on)
-        {
-            resolver.Join(query.resolver, query, on);
-            return new Query<T, TJoin>(context);
-        }
-
-        public Query<TResult> Select<TResult>(Expression<Func<T, TResult>> selector)
-        {
-            //resolver.SignAni(typeof(TResult), typeof(T));
-            resolver.Select(selector);
-            return new Query<TResult>(context);
-        }
-
-        public IEnumerable<T> ToArray()
-        {
-            IEnumerable<T> results = null;
-            using (var reader = SqlCore.ExecuteReader(this, this.context.GetCommand()))
-            {
-                results = reader.ToList<T>();
-            }
-            return results;
-        }
-
-      
-
-        public Query<T> Where(Expression<Func<T, bool>> conditions)
-        {
-            resolver.Where(conditions);
-            return this;
-        }
 
         public override string ToString()
         {
@@ -102,22 +51,84 @@ namespace Leo.Data
         }
     }
 
-    public class Query<T1, T2> 
+    public class Query<T1> :Query
     {
-        private readonly LambdaResolver resolver;
-        private readonly QueryContext context;
+        internal Query(QueryContext context):base(context)
+        { }
 
-        internal Query(QueryContext context)
+        public Query<T1, TJoin> Join<TJoin>(Expression<Func<T1, TJoin, bool>> on)
         {
-            this.resolver = context.Resolver;
-            this.context = context;
+            resolver.Join(on);
+            return new Query<T1, TJoin>(context);
         }
 
+        public Query<T1, TJoin> Join<TJoin>(Query<TJoin> query, Expression<Func<T1, TJoin, bool>> on)
+        {
+            resolver.Join( query, on);
+            return new Query<T1, TJoin>(context);
+        }
 
+        public Query<TResult> Select<TResult>(Expression<Func<T1, TResult>> selector)
+        {
+            resolver.Select(selector);
+            return new Query<TResult>(context);
+        }
+
+        public IEnumerable<T1> ToArray()
+        {
+            IEnumerable<T1> results = null;
+            using (var reader = SqlCore.ExecuteReader(this, this.context.GetCommand()))
+            {
+                results = reader.ToList<T1>();
+            }
+            return results;
+        }
+
+        public Query<T1> Where(Expression<Func<T1, bool>> conditions)
+        {
+            resolver.Where(conditions);
+            return this;
+        }
+
+        public Query<T1> Order(Expression<Func<T1, object>> selector)
+        {
+            resolver.Order(selector);
+            return this;
+        }
+
+        public Query<T1> Group(Expression<Func<T1, object>> selector)
+        {
+            resolver.Group(selector);
+            return this;
+        }
+
+        public Query<T1> Having(Expression<Func<T1, bool>> conditions)
+        {
+            resolver.Having(conditions);
+            return this;
+        }
+
+        public Query<T1> Skip(int count)
+        {
+            resolver.Skip = count;
+            return this;
+        }
+
+        public Query<T1> Take(int count)
+        {
+            resolver.Size = count;
+            return this;
+        }
+    }
+
+    public class Query<T1, T2> :Query
+    {
+        internal Query(QueryContext context) : base(context)
+        {
+        }
 
         public Query<TResult> Select<TResult>(Expression<Func<T1, T2, TResult>> selector)
         {
-            //resolver.SignAni(typeof(TResult), typeof(T1), typeof(T2));
             resolver.Select(selector);
             return new Query<TResult>(context);
         }
@@ -128,7 +139,7 @@ namespace Leo.Data
             return this;
         }
 
-        public Query<T1, T2, TJoin> Join<TJoin>(Expression<Func<T1, TJoin, bool>> on)
+        public Query<T1, T2, TJoin> Join<TJoin>(Expression<Func<T1,T2, TJoin, bool>> on)
         {
             resolver.Join(on);
             return new Query<T1, T2, TJoin>(context);
@@ -136,42 +147,58 @@ namespace Leo.Data
 
         public IEnumerable<TResult> ToArray<TResult>(Expression<Func<T1, T2, TResult>> selector)
         {
-            IEnumerable<TResult> results = null;
+            resolver.Select(selector); 
             using (var reader = SqlCore.ExecuteReader(this, this.context.GetCommand()))
             {
+                IEnumerable<TResult> results = null;
                 results = reader.ToList<TResult>();
+                return results;
             }
-            return results;
         }
+
+        public Query<T1,T2> Order(Expression<Func<T1,T2, object>> selector)
+        {
+            resolver.Order(selector);
+            return this;
+        }
+
+        public Query<T1,T2> Group(Expression<Func<T1,T2, object>> selector)
+        {
+            resolver.Group(selector);
+            return this;
+        }
+
+        public Query<T1,T2> Having(Expression<Func<T1,T2, bool>> conditions)
+        {
+            resolver.Having(conditions);
+            return this;
+        }
+
+        public Query<T1,T2> Skip(int count)
+        {
+            resolver.Skip = count;
+            return this;
+        }
+
+        public Query<T1,T2> Take(int count)
+        {
+            resolver.Size = count;
+            return this;
+        }
+
+
     }
 
-    public class Query<T1, T2, T3> 
+    public class Query<T1, T2, T3> :Query
     {
-
-        private readonly LambdaResolver resolver;
-        private readonly QueryContext context;
-
-        internal Query(QueryContext context)
+        internal Query(QueryContext context) : base(context)
         {
-            this.resolver = context.Resolver;
-            this.context = context;
         }
 
         public Query<TResult> Select<TResult>(Expression<Func<T1, T2, T3, TResult>> selector)
         {
-            //resolver.SignAni(typeof(TResult), typeof(T1), typeof(T2), typeof(T3));
             resolver.Select(selector);
             return new Query<TResult>(context);
-        }
-
-        public IEnumerable<TResult> ToArray<TResult>(Expression<Func<T1, T2, T3, TResult>> selector)
-        {
-            IEnumerable<TResult> results = null;
-            using (var reader = SqlCore.ExecuteReader(this, this.context.GetCommand()))
-            {
-                results = reader.ToList<TResult>();
-            }
-            return results;
         }
 
         public Query<T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> conditions)
@@ -179,6 +206,49 @@ namespace Leo.Data
             resolver.Where(conditions);
             return this;
         }
+
+        public IEnumerable<TResult> ToArray<TResult>(Expression<Func<T1, T2, T3, TResult>> selector)
+        {
+            resolver.Select(selector);
+            using (var reader = SqlCore.ExecuteReader(this, this.context.GetCommand()))
+            {
+                IEnumerable<TResult> results = null;
+                results = reader.ToList<TResult>();
+                return results;
+            }
+        }
+
+        public Query<T1, T2,T3> Order(Expression<Func<T1, T2,T3, object>> selector)
+        {
+            resolver.Order(selector);
+            return this;
+        }
+
+        public Query<T1, T2,T3> Group(Expression<Func<T1, T2,T3, object>> selector)
+        {
+            resolver.Group(selector);
+            return this;
+        }
+
+        public Query<T1, T2,T3> Having(Expression<Func<T1, T2,T3, bool>> conditions)
+        {
+            resolver.Having(conditions);
+            return this;
+        }
+
+        public Query<T1, T2,T3> Skip(int count)
+        {
+            resolver.Skip = count;
+            return this;
+        }
+
+        public Query<T1, T2,T3> Take(int count)
+        {
+            resolver.Size = count;
+            return this;
+        }
+
+
     }
 
 }

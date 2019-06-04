@@ -59,10 +59,9 @@ namespace Leo.Data.Expressions
         /// </summary>
         private Dictionary<Type, List<Type>> AnonymousTypeMapper { get; set; }
 
-        private void Init()
+        internal void Init()
         {
-            Parameters = new Dictionary<string, object>();
-            this.SqlPart = new Dictionary<SqlPartEnum, List<string>>();
+            this.Parameters = new Dictionary<string, object>();
             this.SourceInfos = new Dictionary<object, SourceInfo>();
             this.ColumnInfos = new Dictionary<MemberInfo, ColumnInfo>();
             this.JoinInfos = new Dictionary<SourceInfo, List<JoinInfo>>();
@@ -70,12 +69,17 @@ namespace Leo.Data.Expressions
             this.AnonymousTypeMapper = new Dictionary<Type, List<Type>>();
             this.CurrentParamIndex = 0;
             this.SourceIndex = 0;
+            this.Size = null;
+            this.Skip = null;
+            this.SqlPart = new Dictionary<SqlPartEnum, List<string>>();
             var e = Enum.GetValues(typeof(SqlPartEnum));
             foreach (SqlPartEnum item in e)
             {
                 SqlPart.Add(item, new List<string>());
             }
         }
+
+
 
         private string Source
         {
@@ -445,6 +449,10 @@ namespace Leo.Data.Expressions
     //Public
     public partial class LambdaResolver
     {
+        public int? Size { get; set; }
+
+        public int? Skip { get; set; }
+
         public Dictionary<string, object> Parameters { get; private set; }
 
         public LambdaResolver(IDbProvider dbProvider)
@@ -455,11 +463,31 @@ namespace Leo.Data.Expressions
 
         public string QueryString()
         {
-            string result = Adapter.QuerySql(Selection, Source, Conditions, Grouping, HavingText, OrderText);
+
+            string result = Adapter.QuerySql(Selection, Source, Conditions, Grouping, HavingText, OrderText
+                , Size, Skip);
             return result;
         }
 
         public string InsertSql<T>(T entity)
+        {
+            Init();
+            var modelType = typeof(T);
+            string tableName = TableAttribute.GetTableName(modelType);
+            AddSource(modelType);
+            var pros = modelType.GetProperties();
+            foreach (var pro in pros)
+            {
+                var att = pro.GetCustomAttribute<ColumnAttribute>();
+                if (att != null && (att.IsIdentity))
+                    continue;
+                this.Parameters.Add(ColumnAttribute.GetColumnName(pro), pro.GetValue(entity));
+            }
+            var fields = Parameters.Select(p => p.Key).ToArray();
+            return Adapter.InsertSql(fields, Source);
+        }
+
+        public string DeleteSql<T>(T entity)
         {
             Init();
             var modelType = typeof(T);
@@ -488,75 +516,16 @@ namespace Leo.Data.Expressions
         }
 
         public void Join<T, TJoin>(Expression<Func<T, TJoin, bool>> on, JoinEnum joinEnum = JoinEnum.INNER)
-        {
-            string onText = Resolver(on, null);
-            var right = SourceInfos[typeof(TJoin)];
-            SourceInfo left = null;
-            if (IsAnonymousType(typeof(T)))
-                left = SourceInfos[AnonymousTypeMapper[typeof(T)].FirstOrDefault()];
-            else
-                left = SourceInfos[typeof(T)];
-            SourceInfos.Remove(right);
-            JoinInfo joinInfo = new JoinInfo
-            {
-                JoinEnum = joinEnum,
-                OnText = onText,
-                Left = left,
-                Right = right
-            };
-            if (!JoinInfos.ContainsKey(joinInfo.Left))
-            {
-                JoinInfos[joinInfo.Left] = new List<JoinInfo>();
-            }
-            JoinInfos[joinInfo.Left].Add(joinInfo);
-        }
+      => JoinType<T, TJoin>(on, joinEnum);
 
-        public void Join<T, TJoin>(LambdaResolver resolver, Query<TJoin> query, Expression<Func<T, TJoin, bool>> on, JoinEnum joinEnum = JoinEnum.INNER)
-        {
-            if (resolver == this)
-            {
-                throw new Exception("不能是自己的子查询。");
-            }
-            var right = AddSource(query);
-            foreach (var item in resolver.AnonymousMemberMapper)
-            {
-                this.AnonymousMemberMapper[item.Key] = item.Value;
-            }
-            foreach (var item in resolver.AnonymousTypeMapper)
-            {
-                this.AnonymousTypeMapper[item.Key] = item.Value;
-            }
+        public void Join<T1, T2, TJoin>(Expression<Func<T1, T2, TJoin, bool>> on, JoinEnum joinEnum = JoinEnum.INNER)
+     => JoinType<T1, TJoin>(on, joinEnum);
 
-            //foreach (var item in resolver.SourceInfos)
-            //{
-            //    this.SourceInfos[item.Key] = item.Value;
-            //}
-            foreach (var item in resolver.ColumnInfos)
-            {
-                item.Value.Source = right;
-                this.ColumnInfos[item.Key] = item.Value;
-            }
-            string onText = Resolver(on, null);
+        public void Join<T, TJoin>(Query<TJoin> query, Expression<Func<T, TJoin, bool>> on, JoinEnum joinEnum = JoinEnum.INNER)
+       => JoinQuery<T, TJoin>(query, on, joinEnum);
 
-            SourceInfo left = null;
-            if (IsAnonymousType(typeof(T)))
-                left = SourceInfos[AnonymousTypeMapper[typeof(T)].FirstOrDefault()];
-            else
-                left = SourceInfos[typeof(T)];
-            SourceInfos.Remove(right);
-            JoinInfo joinInfo = new JoinInfo
-            {
-                JoinEnum = joinEnum,
-                OnText = onText,
-                Left = left,
-                Right = right
-            };
-            if (!JoinInfos.ContainsKey(joinInfo.Left))
-            {
-                JoinInfos[joinInfo.Left] = new List<JoinInfo>();
-            }
-            JoinInfos[joinInfo.Left].Add(joinInfo);
-        }
+        public void Join<T1, T2, TJoin>(Query<TJoin> query, Expression<Func<T1, T2, TJoin, bool>> on, JoinEnum joinEnum = JoinEnum.INNER)
+     => JoinQuery<T1, TJoin>(query, on, joinEnum);
 
         public void Select<T1, TResult>(Expression<Func<T1, TResult>> selector)
         {
@@ -603,14 +572,14 @@ namespace Leo.Data.Expressions
         public void Group<T1, T2, T3>(Expression<Func<T1, T2, T3, object>> selector)
          => Resolver(selector, SqlPartEnum.Group);
 
-        public void Having<T1>(Expression<Func<T1, bool>> selector)
-              => Resolver(selector, SqlPartEnum.Having);
+        public void Having<T1>(Expression<Func<T1, bool>> conditions)
+              => Resolver(conditions, SqlPartEnum.Having);
 
-        public void Having<T1, T2>(Expression<Func<T1, T2, bool>> selector)
-              => Resolver(selector, SqlPartEnum.Having);
+        public void Having<T1, T2>(Expression<Func<T1, T2, bool>> conditions)
+              => Resolver(conditions, SqlPartEnum.Having);
 
-        public void Having<T1, T2, T3>(Expression<Func<T1, T2, T3, bool>> selector)
-          => Resolver(selector, SqlPartEnum.Having);
+        public void Having<T1, T2, T3>(Expression<Func<T1, T2, T3, bool>> conditions)
+          => Resolver(conditions, SqlPartEnum.Having);
 
         public void Where<T1>(Expression<Func<T1, bool>> conditions)
        => Resolver(conditions, SqlPartEnum.Where);
@@ -630,6 +599,55 @@ namespace Leo.Data.Expressions
     //Helper
     public partial class LambdaResolver
     {
+        private void JoinType<T, TJoin>(Expression on, JoinEnum joinEnum = JoinEnum.INNER)
+        {
+            string onText = Resolver(on, null);
+            var right = SourceInfos[typeof(TJoin)];
+            SourceInfo left = null;
+            if (IsAnonymousType(typeof(T)))
+                left = SourceInfos[AnonymousTypeMapper[typeof(T)].FirstOrDefault()];
+            else
+                left = SourceInfos[typeof(T)];
+            SourceInfos.Remove(right);
+            JoinInfo joinInfo = new JoinInfo
+            {
+                JoinEnum = joinEnum,
+                OnText = onText,
+                Left = left,
+                Right = right
+            };
+            if (!JoinInfos.ContainsKey(joinInfo.Left))
+            {
+                JoinInfos[joinInfo.Left] = new List<JoinInfo>();
+            }
+            JoinInfos[joinInfo.Left].Add(joinInfo);
+        }
+
+        private void JoinQuery<T, TJoin>(Query<TJoin> query, Expression on, JoinEnum joinEnum = JoinEnum.INNER)
+        {
+            if (query.resolver == this) throw new Exception("不能是自己的子查询。");
+            var right = AddSource(query);
+            string onText = Resolver(on, null);
+            SourceInfo left = null;
+            if (IsAnonymousType(typeof(T)))
+                left = SourceInfos[AnonymousTypeMapper[typeof(T)].FirstOrDefault()];
+            else
+                left = SourceInfos[typeof(T)];
+            SourceInfos.Remove(right);
+            JoinInfo joinInfo = new JoinInfo
+            {
+                JoinEnum = joinEnum,
+                OnText = onText,
+                Left = left,
+                Right = right
+            };
+            if (!JoinInfos.ContainsKey(joinInfo.Left))
+            {
+                JoinInfos[joinInfo.Left] = new List<JoinInfo>();
+            }
+            JoinInfos[joinInfo.Left].Add(joinInfo);
+        }
+
         /// <summary>
         /// 递归获取源类型信息。
         /// </summary>
@@ -714,13 +732,26 @@ namespace Leo.Data.Expressions
             {
                 var query = source as Query;
                 sourceInfo.IsQuery = true;
-                sourceInfo.SourceText = query.ToSql();
+                sourceInfo.SourceText = query.resolver.QueryString();
                 sourceInfo.SourceType = typeof(Query);
                 sourceInfo.Parameters = query.resolver.Parameters;
                 foreach (var item in sourceInfo.Parameters)
                 {
                     string newKey = AddParameter(item.Value);
                     sourceInfo.SourceText = sourceInfo.SourceText.Replace(item.Key, newKey);
+                }
+                foreach (var item in query.resolver.AnonymousMemberMapper)
+                {
+                    this.AnonymousMemberMapper[item.Key] = item.Value;
+                }
+                foreach (var item in query.resolver.AnonymousTypeMapper)
+                {
+                    this.AnonymousTypeMapper[item.Key] = item.Value;
+                }
+                foreach (var item in query.resolver.ColumnInfos)
+                {
+                    item.Value.Source = sourceInfo;
+                    this.ColumnInfos[item.Key] = item.Value;
                 }
             }
             SourceInfos[source] = sourceInfo;

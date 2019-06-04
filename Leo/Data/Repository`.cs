@@ -13,10 +13,10 @@ namespace Leo.Data
         private readonly IUnitOfWork unit;
         private readonly LambdaResolver resolver;
 
-        public Repository(IUnitOfWork unit, LambdaResolver resolver)
+        public Repository(IUnitOfWork unit, IDbProvider dbProvider)
         {
             this.unit = unit;
-            this.resolver = resolver;
+            this.resolver = new LambdaResolver(dbProvider);
         }
 
         public void Add(params T[] entities)
@@ -30,7 +30,6 @@ namespace Leo.Data
             }
             unit.Execute(cmd => cmd.ExecuteNonQuery(this, sql, paramList));
         }
-
 
         public T Get(params object[] keyvalues)
         {
@@ -62,10 +61,9 @@ namespace Leo.Data
             }
         }
 
-       
-
         public Query<T> Query()
         {
+            resolver.Init();
             return unit.Query<T>(c=>new Query<T>(new QueryContext(resolver,c)));
         }
 

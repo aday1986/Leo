@@ -30,7 +30,6 @@ namespace Leo.Data.SqlClient
         public IDbConnection CreateConnection()
         {
             return new SqlConnection(connectionString);
-
         }
 
         public IDbDataParameter CreateDataParameter(string key, object value)

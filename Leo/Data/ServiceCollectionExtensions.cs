@@ -10,7 +10,6 @@ namespace Leo.Data
     {
         public static IServiceCollection AddRepository(this IServiceCollection services,IDbProvider  dbProvider)
         {
-            services.AddTransient<LambdaResolver>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddSingleton<IDbProvider>(dbProvider);
             services.AddScoped(typeof(IRepository<>),typeof(Repository<>));

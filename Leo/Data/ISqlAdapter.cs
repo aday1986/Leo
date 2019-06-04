@@ -12,28 +12,31 @@ namespace Leo.Data
         {
             return string.IsNullOrEmpty(value) ? string.Empty : $" {value}";
         }
-        public virtual string QuerySql(string selection, string source, string conditions, string order, string grouping, string having)
+        public virtual string QuerySql(string selection, string source, string conditions,
+            string order, string grouping, string having,
+            int? size,int? skip)
         {
-            return $"SELECT {selection} FROM {source}{N(conditions)}{N(order)}{N(grouping)}{N(having)}";
-        }
-        public virtual string QueryStringPage(string source, string selection, string conditions, string order,
-            int pageSize)
-        {
-            return string.Format("SELECT TOP({4}) {0} FROM {1} {2} {3}",
-                    selection, source, conditions, order, pageSize);
-        }
+            if (size.HasValue && skip.HasValue)
+            {
+                var innerQuery = string.Format("SELECT {0},ROW_NUMBER() OVER ({1}) AS RN FROM {2} {3}",
+                                          selection, order, source, conditions);
 
-        public virtual string QueryStringPage(string source, string selection, string conditions, string order,
-          int pageSize, int pageNumber)
-        {
-            var innerQuery = string.Format("SELECT {0},ROW_NUMBER() OVER ({1}) AS RN FROM {2} {3}",
-                                           selection, order, source, conditions);
-
-            return string.Format("SELECT TOP {0} * FROM ({1}) InnerQuery WHERE RN > {2} ORDER BY RN",
-                                 pageSize, innerQuery, pageSize * (pageNumber - 1));
-            // return string.Format("SELECT {0} FROM {1} {2} {3} OFFSET {4} ROWS FETCH NEXT {5} ROWS ONLY",
-            //selection, source, conditions, order, pageSize * (pageNumber - 1), pageSize);
+                return string.Format("SELECT TOP {0} * FROM ({1}) InnerQuery WHERE RN > {2} ORDER BY RN",
+                                     size, innerQuery, skip);
+                // return string.Format("SELECT {0} FROM {1} {2} {3} OFFSET {4} ROWS FETCH NEXT {5} ROWS ONLY",
+                //selection, source, conditions, order, pageSize * (pageNumber - 1), pageSize);
+            }
+            else if(size.HasValue)
+            {
+              return  $"SELECT TOP {size} {selection} FROM {source}{N(conditions)}{N(order)}{N(grouping)}{N(having)}";
+            }
+            else
+            {
+                return $"SELECT {selection} FROM {source}{N(conditions)}{N(order)}{N(grouping)}{N(having)}";
+            }
+          
         }
+      
 
         /// <summary>
         /// 返回[table] AS alias或(query) AS alias。

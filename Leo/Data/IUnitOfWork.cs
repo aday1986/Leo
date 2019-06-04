@@ -43,8 +43,6 @@ namespace Leo.Data
             }
         }
 
-      
-
         public void Execute(Func<IDbCommand, int> func)
         {
             using (var command= dbProvider.CreateCommand())
@@ -74,7 +72,6 @@ namespace Leo.Data
                 if (currentTran != null) currentTran = null;
                 rowCount = 0;
             }
-
         }
 
         public Query<T> Query<T>(Func<IDbCommand, Query<T>> func)
