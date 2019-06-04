@@ -487,7 +487,7 @@ namespace Leo.Data.Expressions
             return Adapter.InsertSql(fields, Source);
         }
 
-        public string DeleteSql<T>(T entity)
+        public string UpdateSql<T>(T entity)
         {
             Init();
             var modelType = typeof(T);
@@ -503,6 +503,34 @@ namespace Leo.Data.Expressions
             }
             var fields = Parameters.Select(p => p.Key).ToArray();
             return Adapter.InsertSql(fields, Source);
+        }
+
+        public string DeleteSql<T>(T entity)
+        {
+            var type = typeof(T);
+            if (ColumnAttribute.TryGetKeyColumns<T>(out Dictionary<PropertyInfo, ColumnAttribute> keys))
+            {
+                BinaryExpression binary = null;
+                foreach (var key in keys)
+                {
+                    var left = Expression.MakeMemberAccess(Expression.Parameter(type), key.Key as MemberInfo);
+                    var right = Expression.Constant(key.Key.GetValue(entity));
+                    if (binary == null)
+                    {
+                        binary = Expression.Equal(left, right);
+                    }
+                    else
+                    {
+                        binary = Expression.AndAlso(binary, Expression.Equal(left, right));
+                    }
+                }
+                var lambda = Expression.Lambda(binary, Expression.Parameter(typeof(T))) as Expression<Func<T, bool>>;
+                return DeleteSql(lambda);
+            }
+            else
+            {
+                throw new Exception($"{type.Name}不包含任何主键字段。");
+            }
         }
 
         public string DeleteSql<T>(Expression<Func<T, bool>> conditions)

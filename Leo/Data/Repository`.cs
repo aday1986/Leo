@@ -69,7 +69,14 @@ namespace Leo.Data
 
         public void Remove(params T[] entities)
         {
-            throw new NotImplementedException();
+            List<Dictionary<string, object>> paramList = new List<Dictionary<string, object>>();
+            var sql = string.Empty;
+            foreach (var entity in entities)
+            {
+                sql = resolver.DeleteSql<T>(entity);
+                paramList.Add(resolver.Parameters);
+            }
+            unit.Execute(cmd => cmd.ExecuteNonQuery(this, sql, paramList));
         }
 
         public void Remove(Expression<Func<T, bool>> conditions)
@@ -84,7 +91,14 @@ namespace Leo.Data
 
         public void Update(params T[] entities)
         {
-            throw new NotImplementedException();
+            List<Dictionary<string, object>> paramList = new List<Dictionary<string, object>>();
+            var sql = string.Empty;
+            foreach (var entity in entities)
+            {
+                sql = resolver.<T>(entity);
+                paramList.Add(resolver.Parameters);
+            }
+            unit.Execute(cmd => cmd.ExecuteNonQuery(this, sql, paramList));
         }
 
         public void Update(T model, Expression<Func<T, bool>> conditions)

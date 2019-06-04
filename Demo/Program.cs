@@ -57,7 +57,8 @@ namespace Demo
 
                     case "4":
                     case "remove":
-                        repository.Remove(t => t.Id >= 10000);
+                        //repository.Remove(t => t.Id >= 10000);
+                        repository.Remove(new Students() { Id = 10000 });
                         Console.WriteLine(repository.SaveChanges());
                         break;
 
