@@ -52,8 +52,6 @@ namespace Leo.Tests.NET461
         public void Query()
         {
             //AddRange();
-            List<Condition> conditions = new List<Condition>();
-            conditions.Add(new Condition() { Key = "Guid", ConditionType = ConditionEnum.NotEqual, Value = "" });
             ToDo(r =>
             {
                 var TestEntitys = r.Query().Where(t=>t.Guid!="").ToArray();
