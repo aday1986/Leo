@@ -33,7 +33,9 @@ namespace Leo.Data.Expressions
 
         private const string PARAM = "p";
 
-        private const string SOURCE = "t";
+        private const string TABLE = "t";
+
+        private const string QUERY = "q";
 
         private int CurrentParamIndex { get; set; }
 
@@ -776,10 +778,11 @@ namespace Leo.Data.Expressions
             if (SourceInfos.ContainsKey(source))
                 return SourceInfos[source];
             SourceInfo sourceInfo = new SourceInfo();
-            sourceInfo.Alias = $"{SOURCE}{SourceIndex++}";
+           
             if (source is Type)
             {
                 var type = source as Type;
+                sourceInfo.Alias = $"{TABLE}{SourceIndex++}";
                 sourceInfo.IsQuery = false;
                 sourceInfo.SourceText = TableAttribute.GetTableName(type);
                 sourceInfo.SourceType = type;
@@ -787,6 +790,7 @@ namespace Leo.Data.Expressions
             else if (source is Query)
             {
                 var query = source as Query;
+                sourceInfo.Alias = $"{QUERY}{SourceIndex++}";
                 sourceInfo.IsQuery = true;
                 sourceInfo.SourceText = query.resolver.QueryString();
                 sourceInfo.SourceType = typeof(Query);

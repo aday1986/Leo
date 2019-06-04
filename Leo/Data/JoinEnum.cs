@@ -1,4 +1,4 @@
-﻿namespace Leo.Data.Expressions
+﻿namespace Leo.Data
 {
     public enum JoinEnum
     {
