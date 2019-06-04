@@ -95,7 +95,7 @@ namespace Leo.Data
             var sql = string.Empty;
             foreach (var entity in entities)
             {
-                sql = resolver.<T>(entity);
+                sql = resolver.UpdateSql<T>(entity);
                 paramList.Add(resolver.Parameters);
             }
             unit.Execute(cmd => cmd.ExecuteNonQuery(this, sql, paramList));
@@ -103,7 +103,7 @@ namespace Leo.Data
 
         public void Update(T model, Expression<Func<T, bool>> conditions)
         {
-            throw new NotImplementedException();
+            unit.Execute(c => c.ExecuteNonQuery(this, resolver.UpdateSql(model,conditions), resolver.Parameters));
         }
     }
 

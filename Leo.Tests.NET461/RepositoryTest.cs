@@ -105,8 +105,8 @@ namespace Leo.Tests.NET461
                 IsTrue(r.SaveChanges() == 1);
                 var newEntity = r.Get(entity.Guid);
                 IsTrue(newEntity.Num == entity.Num);
-                //Console.WriteLine(newEntity.NoUpdate);
-                //IsTrue( string.IsNullOrEmpty( newEntity.NoUpdate ));未实现
+                Console.WriteLine(newEntity.NoUpdate);
+                IsTrue(string.IsNullOrEmpty(newEntity.NoUpdate)); //未实现
             });
         }
 

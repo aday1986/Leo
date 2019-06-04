@@ -487,7 +487,7 @@ namespace Leo.Data.Expressions
             return Adapter.InsertSql(fields, Source);
         }
 
-        public string UpdateSql<T>(T entity)
+        public string UpdateSql<T>(T entity, Expression<Func<T, bool>> conditions = null)
         {
             Init();
             var modelType = typeof(T);
@@ -497,12 +497,40 @@ namespace Leo.Data.Expressions
             foreach (var pro in pros)
             {
                 var att = pro.GetCustomAttribute<ColumnAttribute>();
-                if (att != null && (att.IsIdentity))
+                if (att != null && (att.IsPrimaryKey || att.IsIdentity || att.NoUpdate))
                     continue;
                 this.Parameters.Add(ColumnAttribute.GetColumnName(pro), pro.GetValue(entity));
             }
             var fields = Parameters.Select(p => p.Key).ToArray();
-            return Adapter.InsertSql(fields, Source);
+
+            if (conditions == null)//条件
+            {
+                if (modelType.TryGetKeyColumns(out Dictionary<PropertyInfo, ColumnAttribute> keys))
+                {
+                    BinaryExpression binary = null;
+                    foreach (var key in keys)
+                    {
+                        var left = Expression.MakeMemberAccess(Expression.Parameter(modelType), key.Key as MemberInfo);
+                        var right = Expression.Constant(key.Key.GetValue(entity));
+                        if (binary == null)
+                        {
+                            binary = Expression.Equal(left, right);
+                        }
+                        else
+                        {
+                            binary = Expression.AndAlso(binary, Expression.Equal(left, right));
+                        }
+                    }
+                    conditions = Expression.Lambda(binary, Expression.Parameter(typeof(T))) as Expression<Func<T, bool>>;
+
+                }
+                else
+                {
+                    throw new Exception($"实体{modelType.Name}没有可被匹配的主键，无法更新。");
+                }
+            }
+            Where(conditions);
+            return Adapter.UpdateSql(fields, Source, Conditions);
         }
 
         public string DeleteSql<T>(T entity)
