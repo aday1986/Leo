@@ -9,9 +9,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Demo", "Demo\Demo.csproj", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Leo.Tests.NET461", "Leo.Tests.NET461\Leo.Tests.NET461.csproj", "{7C380514-5C60-48CC-8BEA-D24E548638D3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fordoo.Attendance", "Fordoo.Attendance\Fordoo.Attendance.csproj", "{57A7ABAA-C12A-4FC0-9404-ABA1F067FDA1}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Fordoo", "Fordoo", "{3751E573-0E1F-429A-B673-32810090E96C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Fordoo.Attendance", "Fordoo\Fordoo.Attendance\Fordoo.Attendance.csproj", "{57A7ABAA-C12A-4FC0-9404-ABA1F067FDA1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
