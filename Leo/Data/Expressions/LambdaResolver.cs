@@ -45,9 +45,9 @@ namespace Leo.Data.Expressions
 
         private Dictionary<SqlPartEnum, List<string>> SqlPart { get; set; }
 
-        internal Dictionary<object, SourceInfo> SourceInfos { get; set; }
+        private Dictionary<object, SourceInfo> SourceInfos { get; set; }
 
-        internal Dictionary<MemberInfo, ColumnInfo> ColumnInfos { get; set; }
+       private Dictionary<MemberInfo, ColumnInfo> ColumnInfos { get; set; }
 
         internal Dictionary<SourceInfo, List<JoinInfo>> JoinInfos { get; set; }
 
@@ -457,15 +457,14 @@ namespace Leo.Data.Expressions
 
         public Dictionary<string, object> Parameters { get; private set; }
 
-        public LambdaResolver(IDbProvider dbProvider)
+        public LambdaResolver(ISqlAdapter adapter)
         {
             Init();
-            Adapter = dbProvider.CreateSqlAdapter();
+            Adapter = adapter;
         }
 
         public string QueryString()
         {
-
             string result = Adapter.QuerySql(Selection, Source, Conditions, Grouping, HavingText, OrderText
                 , Size, Skip);
             return result;
@@ -773,7 +772,7 @@ namespace Leo.Data.Expressions
         /// </summary>
         /// <param name="source"></param>
         /// <returns></returns>
-        internal SourceInfo AddSource(object source)
+      private SourceInfo AddSource(object source)
         {
             if (SourceInfos.ContainsKey(source))
                 return SourceInfos[source];

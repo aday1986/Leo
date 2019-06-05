@@ -37,12 +37,21 @@ namespace Leo.Data
 
     public class Query
     {
-      internal readonly LambdaResolver resolver;
-       internal readonly QueryContext context;
+        internal readonly LambdaResolver resolver;
+        internal readonly QueryContext context;
         internal Query(QueryContext context)
         {
             this.resolver = context.Resolver;
             this.context = context;
+        }
+
+        internal Query(IDbProvider provider)
+        {
+            this.resolver = provider.CreateResolver();
+            var cnn = provider.CreateConnection();
+            var cmd = provider.CreateCommand();
+            cmd.Connection = cnn;
+            this.context = new QueryContext(resolver, cmd);
         }
 
         public override string ToString()
@@ -51,10 +60,46 @@ namespace Leo.Data
         }
     }
 
-    public class Query<T1> :Query
+    public class Query<T1> : Query
     {
-        internal Query(QueryContext context):base(context)
+        public Query(IDbProvider provider) : base(provider)
+        {
+
+        }
+        internal Query(QueryContext context) : base(context)
         { }
+
+        public T1 Get(params object[] keyvalues)
+        {
+            if (keyvalues == null || keyvalues.Length == 0)
+                return default;
+            var type = typeof(T1);
+            if (ColumnAttribute.TryGetKeyColumns<T1>(out Dictionary<PropertyInfo, ColumnAttribute> keys))
+            {
+                BinaryExpression binary = null;
+                int i = 0;
+                foreach (var key in keys)
+                {
+                    var left = Expression.MakeMemberAccess(Expression.Parameter(type), key.Key as MemberInfo);
+                    var right = Expression.Constant(keyvalues[i]);
+                    if (binary == null)
+                    {
+                        binary = Expression.Equal(left, right);
+                    }
+                    else
+                    {
+                        binary = Expression.AndAlso(binary, Expression.Equal(left, right));
+                    }
+                    i++;
+                }
+                var lambda = Expression.Lambda(binary, Expression.Parameter(typeof(T1)));
+                return this.Where((Expression<Func<T1, bool>>)lambda).ToArray().FirstOrDefault();
+            }
+            else
+            {
+                throw new Exception($"{type.Name}不包含任何主键字段。");
+            }
+        }
 
         public Query<T1, TJoin> Join<TJoin>(Expression<Func<T1, TJoin, bool>> on)
         {
@@ -64,7 +109,7 @@ namespace Leo.Data
 
         public Query<T1, TJoin> Join<TJoin>(Query<TJoin> query, Expression<Func<T1, TJoin, bool>> on)
         {
-            resolver.Join( query, on);
+            resolver.Join(query, on);
             return new Query<T1, TJoin>(context);
         }
 
@@ -77,10 +122,8 @@ namespace Leo.Data
         public IEnumerable<T1> ToArray()
         {
             IEnumerable<T1> results = null;
-            using (var reader = SqlCore.ExecuteReader(this, this.context.GetCommand()))
-            {
-                results = reader.ToList<T1>();
-            }
+            results = SqlCore.Query<T1>(this, this.context.GetCommand());
+            resolver.Init();
             return results;
         }
 
@@ -121,7 +164,7 @@ namespace Leo.Data
         }
     }
 
-    public class Query<T1, T2> :Query
+    public class Query<T1, T2> : Query
     {
         internal Query(QueryContext context) : base(context)
         {
@@ -139,7 +182,7 @@ namespace Leo.Data
             return this;
         }
 
-        public Query<T1, T2, TJoin> Join<TJoin>(Expression<Func<T1,T2, TJoin, bool>> on)
+        public Query<T1, T2, TJoin> Join<TJoin>(Expression<Func<T1, T2, TJoin, bool>> on)
         {
             resolver.Join(on);
             return new Query<T1, T2, TJoin>(context);
@@ -147,40 +190,37 @@ namespace Leo.Data
 
         public IEnumerable<TResult> ToArray<TResult>(Expression<Func<T1, T2, TResult>> selector)
         {
-            resolver.Select(selector); 
-            using (var reader = SqlCore.ExecuteReader(this, this.context.GetCommand()))
-            {
-                IEnumerable<TResult> results = null;
-                results = reader.ToList<TResult>();
-                return results;
-            }
+            resolver.Select(selector);
+            var results = SqlCore.Query<TResult>(this, this.context.GetCommand());
+            return results;
+
         }
 
-        public Query<T1,T2> Order(Expression<Func<T1,T2, object>> selector)
+        public Query<T1, T2> Order(Expression<Func<T1, T2, object>> selector)
         {
             resolver.Order(selector);
             return this;
         }
 
-        public Query<T1,T2> Group(Expression<Func<T1,T2, object>> selector)
+        public Query<T1, T2> Group(Expression<Func<T1, T2, object>> selector)
         {
             resolver.Group(selector);
             return this;
         }
 
-        public Query<T1,T2> Having(Expression<Func<T1,T2, bool>> conditions)
+        public Query<T1, T2> Having(Expression<Func<T1, T2, bool>> conditions)
         {
             resolver.Having(conditions);
             return this;
         }
 
-        public Query<T1,T2> Skip(int count)
+        public Query<T1, T2> Skip(int count)
         {
             resolver.Skip = count;
             return this;
         }
 
-        public Query<T1,T2> Take(int count)
+        public Query<T1, T2> Take(int count)
         {
             resolver.Size = count;
             return this;
@@ -189,7 +229,7 @@ namespace Leo.Data
 
     }
 
-    public class Query<T1, T2, T3> :Query
+    public class Query<T1, T2, T3> : Query
     {
         internal Query(QueryContext context) : base(context)
         {
@@ -210,39 +250,35 @@ namespace Leo.Data
         public IEnumerable<TResult> ToArray<TResult>(Expression<Func<T1, T2, T3, TResult>> selector)
         {
             resolver.Select(selector);
-            using (var reader = SqlCore.ExecuteReader(this, this.context.GetCommand()))
-            {
-                IEnumerable<TResult> results = null;
-                results = reader.ToList<TResult>();
-                return results;
-            }
+            var results = SqlCore.Query<TResult>(this, this.context.GetCommand());
+            return results;
         }
 
-        public Query<T1, T2,T3> Order(Expression<Func<T1, T2,T3, object>> selector)
+        public Query<T1, T2, T3> Order(Expression<Func<T1, T2, T3, object>> selector)
         {
             resolver.Order(selector);
             return this;
         }
 
-        public Query<T1, T2,T3> Group(Expression<Func<T1, T2,T3, object>> selector)
+        public Query<T1, T2, T3> Group(Expression<Func<T1, T2, T3, object>> selector)
         {
             resolver.Group(selector);
             return this;
         }
 
-        public Query<T1, T2,T3> Having(Expression<Func<T1, T2,T3, bool>> conditions)
+        public Query<T1, T2, T3> Having(Expression<Func<T1, T2, T3, bool>> conditions)
         {
             resolver.Having(conditions);
             return this;
         }
 
-        public Query<T1, T2,T3> Skip(int count)
+        public Query<T1, T2, T3> Skip(int count)
         {
             resolver.Skip = count;
             return this;
         }
 
-        public Query<T1, T2,T3> Take(int count)
+        public Query<T1, T2, T3> Take(int count)
         {
             resolver.Size = count;
             return this;

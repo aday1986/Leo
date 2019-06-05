@@ -25,10 +25,10 @@ namespace Leo.Data
 
         }
 
-        public CommandCollections(IDbCommand command, List<Dictionary<string, object>> dataParameters)
+        public CommandCollections(IDbCommand command, Dictionary<string, object>[] dataParameters)
         {
             Command = command;
-            DataParameters = dataParameters;
+            DataParameters = dataParameters.ToList();
         }
 
         public IDbCommand Command { get; set; }
@@ -84,21 +84,24 @@ namespace Leo.Data
 
         }
 
-        public static IDataReader ExecuteReader(object sender, IDbCommand command)
+        public static IEnumerable<T> Query<T>(object sender, IDbCommand command)
         {
             try
             {
                 BeforeExecute?.Invoke(sender, new BeforeExecuteEventArgs() { Command = command });
                 var now = DateTime.Now;
                 if (command.Connection.State != ConnectionState.Open) command.Connection.Open();
-                var result = command.ExecuteReader();
-                string message = $"Sql:{command.CommandText}\n" +
-                    $"用时:{(DateTime.Now - now).TotalMilliseconds}毫秒。";
+                using (var reader= command.ExecuteReader())
+                {
+                    var result = reader.ToList<T>();
+                    string message = $"Sql:{command.CommandText}\n" +
+                   $"用时:{(DateTime.Now - now).TotalMilliseconds}毫秒。";
 #if DEBUG
-                Debug.Print(message);
+                    Debug.Print(message);
 #endif
-                AfterExecute?.Invoke(sender, new AfterExecuteEventArgs() { Command = command, Message = message });
-                return result;
+                    AfterExecute?.Invoke(sender, new AfterExecuteEventArgs() { Command = command, Message = message });
+                    return result;
+                }
             }
             catch (Exception ex)
             {

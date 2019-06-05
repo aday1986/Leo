@@ -1,11 +1,13 @@
 ﻿using ConsoleApp1.Models;
 using Leo.Config;
 using Leo.Data;
+using Leo.Data.Core;
 using Leo.Data.Expressions;
 using Leo.Data.Sqlite;
 using Leo.Logging.Console;
 using Leo.Logging.File;
 using Leo.Logging.Sqlite;
+using Leo.ThirdParty.Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
@@ -20,7 +22,7 @@ namespace Demo
          static void Main(string[] args)
         {
             var services = ConfigureServices();
-           var repository = services.GetService<IRepository<Students>>();
+           var repository = services.GetService<IDML>();
                
             while (true)
             {
@@ -33,31 +35,42 @@ namespace Demo
                 {
                     case "add":
                     case "1":
-                        List<Students> students = new List<Students>();
+                        List<Classes> students = new List<Classes>();
                         for (int i = 0; i < 10000; i++)
                         {
-                            students.Add(new Students() { StudentName = Guid.NewGuid().ToString(), CreateDate = DateTime.Now, StudentEnum = (StudentEnum)random.Next(0, 2) });
+                            students.Add(new Classes { Name = Guid.NewGuid().ToString(), CreateDate = DateTime.Now });
                         }
                         repository.Add(students.ToArray());
                         Console.WriteLine(repository.SaveChanges());
                         break;
                     case "2":
                     case "query":
-                        var result = repository.Query().Where(t => t.Id >= 50 && t.Id <= 100).ToArray();
-                       Console.WriteLine(result.Count());
+                        //var child=  services.GetService<Query<Students>>().Select(t =>new { t.Id });
+                        var rStudent = services.GetService<Query<Students>>().Where(t=>t.Id>=0).ToArray();
+                           
+                        Console.WriteLine(rStudent.Count());
                         break;
 
                     case "3":
-                    case "get":
-                        var r = repository.Get(1);
+                    case "dapper":
+                        System.Data.IDbConnection db = new System.Data.SQLite.SQLiteConnection($"Data Source={AppDomain.CurrentDomain.BaseDirectory}TestData.db");
+                        var rDapper = db.Query<Students>("SELECT * FROM Students WHERE ID>=0");
                         break;
+                   
 
-                    case "4":
-                    case "remove":
-                        //repository.Remove(t => t.Id >= 10000);
-                        repository.Remove(new Students() { Id = 10000 });
-                        Console.WriteLine(repository.SaveChanges());
-                        break;
+
+                    //case "3":
+                    //case "get":
+                    //    var r = services.GetService<Query<Students>>().Get("a");
+                    //    Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(r));
+                    //    break;
+
+                    //case "4":
+                    //case "remove":
+                    //    //repository.Remove(t => t.Id >= 10000);
+                    //    repository.Remove(new Students() { Id = 10000 });
+                    //    Console.WriteLine(repository.SaveChanges());
+                    //    break;
 
                     default:
                         break;

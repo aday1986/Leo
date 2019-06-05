@@ -14,7 +14,6 @@ namespace ConsoleApp1.Models
         [Column(ColumnName ="Name")]
         public string StudentName { get; set; }
         public DateTime CreateDate { get; set; }
-
         public StudentEnum StudentEnum { get; set; }
     }
 

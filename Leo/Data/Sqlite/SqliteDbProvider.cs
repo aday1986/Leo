@@ -37,9 +37,9 @@ namespace Leo.Data.Sqlite
             return new SQLiteParameter(key, value);
         }
 
-        public ISqlAdapter CreateSqlAdapter()
+        public LambdaResolver CreateResolver()
         {
-            return new SqliteSqlAdapter();
+            return new LambdaResolver(new SqliteSqlAdapter());
         }
     }
 }

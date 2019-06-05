@@ -37,9 +37,10 @@ namespace Leo.Data.SqlClient
            return new SqlParameter(key,value);
         }
 
-        public ISqlAdapter CreateSqlAdapter()
+        public LambdaResolver CreateResolver()
         {
-            return new SqlClientSqlAdapter();
+            return new LambdaResolver(new SqlClientSqlAdapter());
         }
+
     }
 }

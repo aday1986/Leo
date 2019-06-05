@@ -15,6 +15,6 @@ namespace Leo.Data
         IDbDataAdapter CreateAdapter();
         IDbCommand CreateCommand();
         IDbDataParameter CreateDataParameter(string key, object value);
-        ISqlAdapter CreateSqlAdapter();
+        LambdaResolver CreateResolver();
     }
 }

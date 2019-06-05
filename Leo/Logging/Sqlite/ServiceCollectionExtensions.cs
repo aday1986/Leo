@@ -6,6 +6,7 @@ using System;
 using System.IO;
 using Leo.Data;
 using Leo.Data.Sqlite;
+using Leo.Data.Core;
 
 namespace Leo.Logging.Sqlite
 {
@@ -39,7 +40,7 @@ namespace Leo.Logging.Sqlite
                 cmd.ExecuteNonQuery();
             }
             services.AddLogging(bulder => bulder.AddProvider(
-                new SqliteLoggerProvider(logservices.BuildServiceProvider().GetService<IRepository<LogInfo>>(), configuration)));
+                new SqliteLoggerProvider(logservices.BuildServiceProvider().GetService<IDML>(), configuration)));
             return services;
         }
     }

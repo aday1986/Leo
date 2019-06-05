@@ -1,4 +1,5 @@
-﻿using Leo.Data.Expressions;
+﻿using Leo.Data.Core;
+using Leo.Data.Expressions;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -10,9 +11,9 @@ namespace Leo.Data
     {
         public static IServiceCollection AddRepository(this IServiceCollection services,IDbProvider  dbProvider)
         {
-            services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddSingleton<IDbProvider>(dbProvider);
-            services.AddScoped(typeof(IRepository<>),typeof(Repository<>));
+            services.AddTransient(typeof(Query<>));
+            services.AddScoped<IDML, DML>();
             return services;
         }
     }

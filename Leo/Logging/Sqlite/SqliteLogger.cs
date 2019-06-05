@@ -1,4 +1,5 @@
 ﻿using Leo.Data;
+using Leo.Data.Core;
 using Leo.Util;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -12,22 +13,22 @@ namespace Leo.Logging.Sqlite
     public class SqliteLogger : BaseLogger
     {
         private readonly string categoryName;
-        private readonly IRepository<LogInfo> repository;
+        private readonly IDML repository;
         private WorkQueue<LogInfo> workQueue;
 
         protected override string ProviderName => SqliteLoggerProvider.ProviderName;
 
-        public SqliteLogger(string categoryName, Leo.Data.IRepository<LogInfo> repository, IConfiguration configuration = null)
+        public SqliteLogger(string categoryName, IDML dml, IConfiguration configuration = null)
             : base(categoryName, configuration)
         {
             this.categoryName = categoryName;
-            this.repository = repository;
+            this.repository = dml;
             workQueue = new WorkQueue<LogInfo>(1000, (s, e) =>
             {
-                lock (repository)//这里要锁实际调用的logService。
+                lock (dml)//这里要锁实际调用的logService。
                 {
-                    repository.Add(e.Item.ToArray());
-                    repository.SaveChanges();
+                    dml.Add(e.Item.ToArray());
+                    dml.SaveChanges();
                 }
             });
         }
