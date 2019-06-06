@@ -10,7 +10,7 @@ using System.Linq;
 namespace Leo.Data
 {
 
-    public class QueryContext
+    internal class QueryContext
     {
         public QueryContext(LambdaResolver resolver, IDbCommand command)
         {

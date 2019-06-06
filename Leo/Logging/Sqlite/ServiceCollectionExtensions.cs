@@ -6,7 +6,6 @@ using System;
 using System.IO;
 using Leo.Data;
 using Leo.Data.Sqlite;
-using Leo.Data.Core;
 
 namespace Leo.Logging.Sqlite
 {

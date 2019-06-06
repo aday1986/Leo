@@ -5,17 +5,113 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Linq.Expressions;
 
 namespace Leo.Data
 {
+
     /// <summary>
-    /// DataReader Extensions
+    /// Expression的实现方式。
     /// </summary>
-    public static class DataReaderExtensions
+    public static partial class DataReaderExtensions
     {
+        public static List<T> ToList_Expression<T>(this IDataReader reader)
+        {
+            Func<IDataRecord, T> func;
+            if (typeof(T).IsVisible)
+            {
+                func = GetVisible<T>();
+            }
+            else
+            {
+                func = GetUnVisible<T>();
+            }
+            var res = new List<T>();
+            while (reader.Read())
+            {
+                res.Add(func(reader));
+            }
+            return res;
+        }
 
-        #region Public Static Methods
+        private static Func<IDataRecord, T> GetUnVisible<T>()
+        {
+            var type = typeof(T);
+            ConstructorInfo ctor = type.GetConstructors()
+                         .OrderBy(c => c.GetParameters().Length).First();
+            //取当前构造函数的参数
+            var parameters = ctor.GetParameters();
+            List<Expression> args = new List<Expression>();
+            var param = Expression.Parameter(typeof(IDataRecord));
+            var getv = typeof(helper).GetMethod("GetValue", new Type[] { typeof(IDataRecord), typeof(string), typeof(Type) });
+            foreach (var p in parameters)
+            {
+                var keyExp = Expression.Constant(p.Name);
+                var typeExp = Expression.Constant(p.ParameterType);
+                var value = Expression.Convert(
+                    Expression.Call(null, getv, param, keyExp, typeExp)
+                    , p.ParameterType);
+                args.Add(value);
+            }
 
+            var body = Expression.New(ctor, args);
+            var lambda = Expression.Lambda(body, param) as Expression<Func<IDataRecord, T>>;
+            return lambda.Compile();
+        }
+
+        private static Func<IDataRecord, T> GetVisible<T>()
+        {
+            var type = typeof(T);
+            ConstructorInfo ctor = type.GetConstructor(Type.EmptyTypes);
+            var properties = type.GetProperties();
+            List<MemberBinding> bindings = new List<MemberBinding>();
+            var param = Expression.Parameter(typeof(IDataRecord));
+            var getv = typeof(helper).GetMethod("GetValue", new Type[] { typeof(IDataRecord), typeof(string), typeof(Type) });
+            foreach (var p in properties)
+            {
+                var keyExp = Expression.Constant(ColumnAttribute.GetColumnName(p));
+                var typeExp = Expression.Constant(p.PropertyType);
+                var value = Expression.Convert(
+                    Expression.Call(null, getv, param, keyExp, typeExp)
+                    , p.PropertyType);
+
+                MemberBinding binding = Expression.Bind(p, value);
+                bindings.Add(binding);
+            }
+            var body = Expression.MemberInit(Expression.New(type), bindings);
+            var lambda = Expression.Lambda(body, param) as Expression<Func<IDataRecord, T>>;
+            return lambda.Compile();
+        }
+
+        private class helper
+        {
+            public static object GetValue(IDataRecord reader, string key, Type type)
+            {
+
+                var v = reader[key];
+                if (type.IsEnum || type == typeof(Int32))
+                {
+                    v = Convert.ToInt32(v);
+                }
+                else if (Leo.Util.Converter.TryParse(v, type, out object result))
+                {
+                    v = result;
+                }
+                else
+                {
+                    throw new Exception($"{v.GetType().Name}类型无法被转换为{type.Name}。");
+                }
+                return v;
+            }
+        }
+
+    }
+
+    /// <summary>
+    /// 反射的实现方式。
+    /// </summary>
+    public static partial class DataReaderExtensions
+    {
 
         /// <summary>
         /// 将SqlDataReader转成T类型。
@@ -23,10 +119,43 @@ namespace Leo.Data
         /// <typeparam name="T"></typeparam>
         /// <param name="reader"></param>
         /// <returns></returns>
-        public static T ToModel<T>(this IDataReader reader)
+       [Obsolete("性能太低，换成ToList_Expression方法。")]
+        public static T ToModel_Reflection<T>(this IDataReader reader)
         {
-            var cache = GetCache<T>();
-            return (T)cache.Invoke(reader);
+            var type = typeof(T);
+            Func<IDataReader, T> value = null;
+            if (type.IsVisible)
+            {
+                value = r =>
+                {
+                    var res = Activator.CreateInstance(type);
+                    var propInfos = type.GetProperties();
+                    foreach (var p in propInfos)
+                    {
+                        var v = helper.GetValue(r, ColumnAttribute.GetColumnName(p), p.PropertyType);
+                        p.SetValue(res, v);
+                    }
+                    return (T)res;
+                };
+            }
+            else
+            {
+                value = r =>
+                {
+                    var constructor = typeof(T).GetConstructors()
+                      .OrderBy(c => c.GetParameters().Length).First();
+                    //取当前构造函数的参数
+                    var parameters = constructor.GetParameters();
+                    var values = new object[parameters.Length];
+                    for (int i = 0; i < parameters.Length; i++)
+                    {
+                        var v = helper.GetValue(r, parameters[i].Name, parameters[i].ParameterType);
+                        values[i] = v;
+                    }
+                    return (T)constructor.Invoke(values);
+                };
+            }
+            return value(reader);
         }
 
         /// <summary>
@@ -36,27 +165,30 @@ namespace Leo.Data
         /// <typeparam name="T"></typeparam>
         /// <param name="reader"></param>
         /// <returns></returns>
-        public static List<T> ToList<T>(this IDataReader reader)
+        [Obsolete("性能太低，换成ToList_Expression方法。")]
+        public static List<T> ToList_Refction<T>(this IDataReader reader)
         {
             if (reader == null)
                 throw new ArgumentNullException("reader");
             Type type = typeof(T);
             List<T> res;
-            if (type.IsVisible)
+            res = new List<T>();
+            while (reader.Read())
             {
-                res = reader.Select<T>();
-            }
-            else
-            {
-                res = new List<T>();
-                while (reader.Read())
-                {
-                    res.Add(reader.ToModel<T>());
-                }
+                res.Add(reader.ToModel_Reflection<T>());
             }
             return res;
         }
+    }
 
+    /// <summary>
+    /// Emit
+    /// </summary>
+    [Obsolete("不支持匿名类。")]
+    public static partial class DataReaderExtensions
+    {
+
+        #region Public Static Methods
 
         #endregion
 
@@ -86,82 +218,16 @@ namespace Leo.Data
         private static readonly MethodInfo DataRecord_IsDBNull =
             typeof(IDataRecord).GetMethod("IsDBNull");
 
-        /// <summary>
-        /// 属性反射信息缓存 key:类型的hashCode,value属性信息
-        /// </summary>
-        private static Dictionary<Type, Func<IDataReader, object>> cache
-            = new Dictionary<Type, Func<IDataReader, object>>();
 
-        private static Func<IDataReader, object> GetCache<T>()
-        {
-            Type type = typeof(T);
-            if (!cache.TryGetValue(type, out Func<IDataReader, object> value))
-            {
-                if (type.IsVisible)
-                {
-                    value = reader =>
-                    {
-                        var res = Activator.CreateInstance(type);
-                        var propInfos = type.GetProperties().ToDictionary(p => p.Name);
-                        for (int i = 0; i < reader.FieldCount; i++)
-                        {
-                            var n = reader.GetName(i);
-                            if (propInfos.ContainsKey(n))
-                            {
-                                var v = GetValue(reader, i, propInfos[n].PropertyType);
-                                propInfos[n].SetValue(res, v);
-                            }
-                        }
-                        return res;
-                    };
-                }
-                else
-                {
-                    value = reader =>
-                    {
-                        var constructor = typeof(T).GetConstructors()
-                          .OrderBy(c => c.GetParameters().Length).First();
-                        //取当前构造函数的参数
-                        var parameters = constructor.GetParameters();
-                        var values = new object[parameters.Length];
-                        for (int i = 0; i < parameters.Length; i++)
-                        {
-                            var v = GetValue(reader, i, parameters[i].ParameterType);
-                            values[i] = v;
-                        }
-                        return (T)constructor.Invoke(values);
-                    };
-                }
-                cache.Add(type, value);
-            }
-            return cache[type];
-        }
-
-        private static object GetValue(IDataReader reader, int i, Type type)
-        {
-            var v = reader.GetValue(i);
-            if (type.IsEnum || type == typeof(Int32))
-            {
-                v = Convert.ToInt32(v);
-            }
-            else if (Leo.Util.Converter.TryParse(v, type, out object result))
-            {
-                v = result;
-            }
-            else
-            {
-                throw new Exception($"{v.GetType().Name}类型无法被解析为{type.Name}。");
-            }
-            return v;
-        }
 
         /// <summary>
-        /// 把结果集流转换成数据实体列表
+        /// 不支持匿名类。
         /// </summary>
         /// <typeparam name="T">数据实体类型</typeparam>
         /// <param name="reader">结果集流</param>
         /// <returns>数据实体列表</returns>
-        private static List<T> Select<T>(this IDataReader reader)
+        [Obsolete("不支持匿名类，且没有做ColumnInfo的映射。")]
+        public static List<T> ToList_Emit<T>(this IDataReader reader)
         {
             return EntityConverter<T>.Select(reader);
         }
@@ -179,8 +245,6 @@ namespace Leo.Data
             return EntityConverter<T>.SelectDelay(reader);
         }
         #endregion
-
-      
 
         #region Class: EntityConverter<T>
 
@@ -242,7 +306,7 @@ namespace Leo.Data
 
             private static IEnumerable<DbColumnInfo> GetProperties()
             {
-               
+
                 foreach (var prop in typeof(T).GetProperties(BindingFlags.Instance | BindingFlags.Public))
                 {
                     if (prop.GetIndexParameters().Length > 0)
@@ -252,7 +316,7 @@ namespace Leo.Data
                         continue;
 
                     var attr = Attribute.GetCustomAttribute(prop, typeof(ColumnAttribute), true) as ColumnAttribute;
-                   
+
                     yield return new DbColumnInfo(prop, attr);
                 }
             }
@@ -358,7 +422,7 @@ namespace Leo.Data
                 il.Emit(OpCodes.Newobj, typeof(T).GetConstructor(Type.EmptyTypes));
                 //var ctor = typeof(T).GetConstructors().OrderBy(c => c.GetParameters().Length).First();
                 //il.Emit(OpCodes.Newobj,ctor );
-               
+
                 il.Emit(OpCodes.Stloc_S, item);
                 for (int i = 0; i < colIndices.Length; i++)
                 {

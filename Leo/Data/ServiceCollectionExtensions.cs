@@ -1,5 +1,4 @@
-﻿using Leo.Data.Core;
-using Leo.Data.Expressions;
+﻿using Leo.Data.Expressions;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;

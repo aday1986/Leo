@@ -35,10 +35,10 @@ namespace Demo
                 {
                     case "add":
                     case "1":
-                        List<Classes> students = new List<Classes>();
-                        for (int i = 0; i < 10000; i++)
+                        List<Students> students = new List<Students>();
+                        for (int i = 0; i < 100000; i++)
                         {
-                            students.Add(new Classes { Name = Guid.NewGuid().ToString(), CreateDate = DateTime.Now });
+                            students.Add(new Students { StudentName = Guid.NewGuid().ToString(), CreateDate = DateTime.Now });
                         }
                         repository.Add(students.ToArray());
                         Console.WriteLine(repository.SaveChanges());
@@ -46,7 +46,9 @@ namespace Demo
                     case "2":
                     case "query":
                         //var child=  services.GetService<Query<Students>>().Select(t =>new { t.Id });
-                        var rStudent = services.GetService<Query<Students>>().Where(t=>t.Id>=0).ToArray();
+                        var rStudent = services.GetService<Query<Students>>().Where(t=>t.Id>=0)
+                            //.Select(t=>new {t.StudentName,t.CreateDate,t.Id,t.StudentEnum })
+                            .ToArray();
                            
                         Console.WriteLine(rStudent.Count());
                         break;
@@ -54,10 +56,12 @@ namespace Demo
                     case "3":
                     case "dapper":
                         System.Data.IDbConnection db = new System.Data.SQLite.SQLiteConnection($"Data Source={AppDomain.CurrentDomain.BaseDirectory}TestData.db");
-                        var rDapper = db.Query<Students>("SELECT * FROM Students WHERE ID>=0");
+                        var rDapper = db.Query<Classes>("SELECT * FROM CLASSES WHERE ID>=0");
                         break;
-                   
 
+                    //case "4":
+                    //    var rStudent = services.GetService<Query<Students>>().Select(t=>)
+                    //    break
 
                     //case "3":
                     //case "get":

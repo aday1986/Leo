@@ -3,26 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
-using System.Text;
 
-namespace Leo.Data.Core
+namespace Leo.Data
 {
-    public interface IDML
-    {
-
-        void Add<T>(params T[] entities);
-
-        void Remove<T>(params T[] entities);
-
-        void Remove<T>(Expression<Func<T, bool>> conditions);
-
-        void Update<T>(params T[] entities);
-
-        void Update<T>(T model, Expression<Func<T, bool>> conditions);
-
-        int SaveChanges();
-    }
-
     public class DML:IDML
     {
         private readonly IDbProvider dbProvider;
@@ -75,8 +58,6 @@ namespace Leo.Data.Core
                 rowCount = 0;
             }
         }
-
-
 
         public DML(IDbProvider dbProvider)
         {
@@ -132,16 +113,6 @@ namespace Leo.Data.Core
         {
             Execute(resolver.UpdateSql(model, conditions), resolver.Parameters);
         }
-    }
-
-    public interface IDDL
-    {
-        void CreateDatabase(string source);
-        void DropDatabase(string source);
-        void CreateTable(Type type);
-        void DropTable(Type type);
-        void AlterTable(Type type);
-        int SaveChanges();
     }
 
 }

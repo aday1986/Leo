@@ -1,4 +1,4 @@
-﻿using Leo.Data.Core;
+﻿using Leo.Data;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;

@@ -8,7 +8,7 @@ using System.Text;
 namespace Leo.Data
 {
 
-    public class CommandCollections
+    class CommandCollections
     {
         public CommandCollections(params IDbCommand[] commands)
         {
@@ -91,9 +91,9 @@ namespace Leo.Data
                 BeforeExecute?.Invoke(sender, new BeforeExecuteEventArgs() { Command = command });
                 var now = DateTime.Now;
                 if (command.Connection.State != ConnectionState.Open) command.Connection.Open();
-                using (var reader= command.ExecuteReader())
+                using (var reader = command.ExecuteReader())
                 {
-                    var result = reader.ToList<T>();
+                    var result = reader.ToList_Expression<T>();
                     string message = $"Sql:{command.CommandText}\n" +
                    $"用时:{(DateTime.Now - now).TotalMilliseconds}毫秒。";
 #if DEBUG
@@ -135,19 +135,19 @@ namespace Leo.Data
         }
     }
 
-    public class AfterExecuteEventArgs : EventArgs
+    class AfterExecuteEventArgs : EventArgs
     {
         public IDbCommand Command { get; set; }
         public string Message { get; set; }
     }
 
-    public class BeforeExecuteEventArgs : EventArgs
+    class BeforeExecuteEventArgs : EventArgs
     {
         public IDbCommand Command { get; set; }
         public string Message { get; set; }
     }
 
-    public class ErrorExecuteEventArgs : EventArgs
+    class ErrorExecuteEventArgs : EventArgs
     {
         public IDbCommand Command { get; set; }
         public string Message { get; set; }
