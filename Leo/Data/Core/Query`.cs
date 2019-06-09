@@ -35,7 +35,7 @@ namespace Leo.Data
         }
     }
 
-    public class Query
+    public abstract class Query
     {
         internal readonly LambdaResolver resolver;
         internal readonly QueryContext context;
