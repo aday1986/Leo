@@ -1,19 +1,17 @@
-﻿using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Leo.Data;
 using Leo.DI;
-using Leo.Data;
-using Leo.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.Extensions.Logging;
 
 namespace Leo.Tests.NET461
 {
     [TestClass]
-    public class RepositoryTest : TestBase
+    public class DataTest : TestBase
     {
-        private static IEnumerable<IRepository<TestEntity>> repositories 
-            =  ServiceProvider.GetServices<IRepository<TestEntity>>();
+        private static IEnumerable<IDML> dmls =  ServiceProvider.GetServices<IDML>();
+    private static Query<TestEntity> query= ServiceProvider.GetService<Query<TestEntity>>();
 
         [TestMethod]
         public void Add()
@@ -33,7 +31,7 @@ namespace Leo.Tests.NET461
                 var entity = GetTestEntity();
                 r.Add(entity);
                 IsTrue(r.SaveChanges() == 1);
-               IsTrue( r.Get(entity.Guid).CreateDate == entity.CreateDate);
+               IsTrue( query.Get(entity.Guid).CreateDate == entity.CreateDate);
             });
         }
 
@@ -54,7 +52,7 @@ namespace Leo.Tests.NET461
             //AddRange();
             ToDo(r =>
             {
-                var TestEntitys = r.Query().Where(t=>t.Guid!="").ToArray();
+                var TestEntitys = query.Where(t=>t.Guid!="").ToArray();
                 Console.WriteLine(TestEntitys.Count());
                 IsTrue(TestEntitys.Any());
             });
@@ -101,7 +99,7 @@ namespace Leo.Tests.NET461
                 entity.Num = new Random().Next();
                 r.Update(entity);
                 IsTrue(r.SaveChanges() == 1);
-                var newEntity = r.Get(entity.Guid);
+                var newEntity = query.Get(entity.Guid);
                 IsTrue(newEntity.Num == entity.Num);
                 Console.WriteLine(newEntity.NoUpdate);
                 IsTrue(string.IsNullOrEmpty(newEntity.NoUpdate)); //未实现
@@ -123,7 +121,7 @@ namespace Leo.Tests.NET461
                 }
                 r.Update(list.ToArray());
                 IsTrue(r.SaveChanges() == list.Count);
-                var newEntity = r.Get(list[8].Guid);
+                var newEntity = query.Get(list[8].Guid);
                 IsTrue(newEntity.Num == list[8].Num);
             });
         }
@@ -148,9 +146,9 @@ namespace Leo.Tests.NET461
             return entity;
         }
 
-        private static void ToDo(Action<IRepository<TestEntity>> action)
+        private static void ToDo(Action<IDML> action)
         {
-            foreach (var repository in repositories)
+            foreach (var repository in dmls)
             {
                 action.Invoke(repository);
             }

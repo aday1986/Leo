@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace Leo.Data
+namespace Leo.Data.Expressions
 {
     public abstract class ISqlAdapter
     {

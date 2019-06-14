@@ -77,7 +77,6 @@ namespace Leo.Data
             Execute(sql,paramList.ToArray());
         }
 
-
         public void Remove<T>(params T[] entities)
         {
             List<Dictionary<string, object>> paramList = new List<Dictionary<string, object>>();
@@ -94,8 +93,6 @@ namespace Leo.Data
         {
             Execute(resolver.DeleteSql(conditions), resolver.Parameters);
         }
-
-
 
         public void Update<T>(params T[] entities)
         {

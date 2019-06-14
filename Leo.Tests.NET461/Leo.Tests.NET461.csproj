@@ -155,12 +155,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="LambdaResolverTest.cs" />
-    <Compile Include="RepositoryTest.cs" />
+    <Compile Include="DataTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestBase.cs" />
     <Compile Include="TestEntity.cs" />
-    <Compile Include="UtilTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
