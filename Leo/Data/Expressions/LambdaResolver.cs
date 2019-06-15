@@ -1,14 +1,8 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.SqlClient;
-using System.Dynamic;
-using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
 
 namespace Leo.Data.Expressions
 {
@@ -37,7 +31,7 @@ namespace Leo.Data.Expressions
 
         private const string QUERY = "q";
 
-        private int CurrentParamIndex { get; set; }
+        private int ParamIndex { get; set; }
 
         private int SourceIndex { get; set; }
 
@@ -69,7 +63,7 @@ namespace Leo.Data.Expressions
             this.JoinInfos = new Dictionary<SourceInfo, List<JoinInfo>>();
             this.AnonymousMemberMapper = new Dictionary<MemberInfo, MemberInfo>();
             this.AnonymousTypeMapper = new Dictionary<Type, List<Type>>();
-            this.CurrentParamIndex = 0;
+            this.ParamIndex = 0;
             this.SourceIndex = 0;
             this.Size = null;
             this.Skip = null;
@@ -80,8 +74,6 @@ namespace Leo.Data.Expressions
                 SqlPart.Add(item, new List<string>());
             }
         }
-
-
 
         private string Source
         {
@@ -101,7 +93,6 @@ namespace Leo.Data.Expressions
                     }
                     result += ",";
                 }
-
                 return result.TrimEnd(',');
             }
         }
@@ -228,7 +219,6 @@ namespace Leo.Data.Expressions
         /// <returns></returns>
         private string Resolver(ParameterExpression exp, MemberInfo member)
         {
-
             if (IsAnonymousType(exp.Type))
             {
                 return "*";
@@ -344,6 +334,7 @@ namespace Leo.Data.Expressions
                 //判断是否为扩展方法，如like,in。
                 if (exp.Method.IsDefined(typeof(System.Runtime.CompilerServices.ExtensionAttribute), false))
                 {
+                    //这边还可以拓展支持Contains，Equals，StartsWith等等EF对应的方法。
                     string parms = string.Empty;
                     for (int i = 1; i < exp.Arguments.Count; i++)
                     {
@@ -420,7 +411,6 @@ namespace Leo.Data.Expressions
                 result += $"({left})";
             else
                 result += left;
-
             if (exp.Right is ConstantExpression && ((ConstantExpression)exp.Right).Value == null)
             {
                 switch (exp.NodeType)
@@ -830,7 +820,7 @@ namespace Leo.Data.Expressions
         private string AddParameter(object value, string alias = null)
         {
 
-            string id = $"{ PARAM}{CurrentParamIndex++}";
+            string id = $"{ PARAM}{ParamIndex++}";
             this.Parameters.Add(Adapter.Parameter(id), value);
             return Adapter.Parameter(id, alias);
         }

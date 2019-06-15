@@ -1,7 +1,6 @@
 ﻿using ConsoleApp1.Models;
 using Leo.Config;
 using Leo.Data;
-using Leo.Data.Core;
 using Leo.Data.Expressions;
 using Leo.Data.Sqlite;
 using Leo.Logging.Console;

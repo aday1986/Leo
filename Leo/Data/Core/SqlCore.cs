@@ -47,6 +47,8 @@ namespace Leo.Data
             var command = commandCollections.Command;
             try
             {
+                if (command.Connection.State != ConnectionState.Open)
+                    command.Connection.Open();
                 BeforeExecute?.Invoke(sender, new BeforeExecuteEventArgs() { Command = commandCollections.Command });
                 var now = DateTime.Now;
                 int result = 0;
@@ -75,6 +77,11 @@ namespace Leo.Data
             {
                 Error?.Invoke(sender, new ErrorExecuteEventArgs() { Command = command, Message = ex.Message });
                 throw;
+            }
+            finally
+            {
+                if (command.Connection.State == ConnectionState.Open)
+                    command.Connection.Close();
             }
         }
 

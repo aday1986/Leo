@@ -15,7 +15,6 @@ namespace Leo.Logging
         public BaseLogger(string categoryName,IConfiguration configuration=null)
         {
             this.categoryName = categoryName;
-
             options = GetLoggerFilterOptions(configuration?.GetSection($"Logging:{ProviderName}"));
         }
 
